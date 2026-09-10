@@ -1,0 +1,263 @@
+{
+ "request": {
+  "lat": 39.9102778,
+  "lng": 116.3152778,
+  "height": 500.0,
+  "geo_level": 21
+ },
+ "count": 19,
+ "results": [
+  {
+   "path": "/geosot/point",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num": "506516229524029440-21"
+   }
+  },
+  {
+   "path": "/geosot/center_point",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "coordinates": [
+     116.31541666666666,
+     39.91041666666667
+    ]
+   }
+  },
+  {
+   "path": "/geosot/location_point",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "coordinates": [
+     116.31527777777778,
+     39.91027777777778
+    ]
+   }
+  },
+  {
+   "path": "/geosot/center_point2",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "coordinates": [
+     116.31541666666666,
+     39.91041666666667
+    ]
+   }
+  },
+  {
+   "path": "/geosot/lng_lat2row_col",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "row": 143677,
+    "col": 418735
+   }
+  },
+  {
+   "path": "/geosot/geo_num2row_col",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "row": 143677,
+    "col": 418735
+   }
+  },
+  {
+   "path": "/geosot/row_col2geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num": "506516229524029440-21"
+   }
+  },
+  {
+   "path": "/geosot/row_col2lng_lat",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "lat": 39.91041666666667,
+    "lng": 116.31541666666666
+   }
+  },
+  {
+   "path": "/geosot/child_geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num_list": [
+     "506516229524029440-23",
+     "506516229524291584-23",
+     "506516229525078016-23",
+     "506516229525340160-23",
+     "506516229524553728-23",
+     "506516229524815872-23",
+     "506516229525602304-23",
+     "506516229525864448-23",
+     "506516229526126592-23",
+     "506516229526388736-23",
+     "506516229527175168-23",
+     "506516229527437312-23",
+     "506516229526650880-23",
+     "506516229526913024-23",
+     "506516229527699456-23",
+     "506516229527961600-23"
+    ]
+   }
+  },
+  {
+   "path": "/geosot/parent_geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num": "506516229524029440-21"
+   }
+  },
+  {
+   "path": "/geosot/adjoin4_geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num_list": [
+     "506516252500426752-21",
+     "506516252466872320-21",
+     "506516252471066624-21",
+     "506516253192486912-21"
+    ]
+   }
+  },
+  {
+   "path": "/geosot/adjoin8_geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num_list": [
+     "506516252500426752-21",
+     "506516252496232448-21",
+     "506516253217652736-21",
+     "506516252471066624-21",
+     "506516253192486912-21",
+     "506516252466872320-21",
+     "506516252462678016-21",
+     "506516253184098304-21"
+    ]
+   }
+  },
+  {
+   "path": "/geosot/geo_num2beidou_grid_code",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "beidou_grid_code": "N50J47534D9244",
+    "beidou_grid_level": 7
+   }
+  },
+  {
+   "path": "/geosot/beidou_grid_code2geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num": 526548092549857272,
+    "geo_level": 23
+   }
+  },
+  {
+   "path": "/geosot3d/point3d",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num": "00b21a4984c3219600004000"
+   }
+  },
+  {
+   "path": "/geosot3d/center_point3d",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "lat": 39.91041666666667,
+    "lng": 116.31541666666666,
+    "height": 505.8142262650899
+   }
+  },
+  {
+   "path": "/geosot3d/extract_geo_num_2d",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num_2d": "526548092552478720-21"
+   }
+  },
+  {
+   "path": "/geosot3d/adjoin6_geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num_list": [
+     "00b21a4984c3219400004000",
+     "00b21a4984c3250400004000",
+     "00b21a4984c3219200004000",
+     "00b21a4984c321b200004000",
+     "00b21a4984c3219600000924",
+     "00b21a4984c3219600004020"
+    ]
+   }
+  },
+  {
+   "path": "/geosot3d/adjoin26_geo_num",
+   "method": "POST",
+   "status": 200,
+   "body": {
+    "server_status": 200,
+    "geo_num_list": [
+     "00b21a4984c321b200004004",
+     "00b21a4984c3252000004004",
+     "00b21a4984c3250400004004",
+     "00b21a4984c3250000004004",
+     "00b21a4984c3219200004004",
+     "00b21a4984c3219000004004",
+     "00b21a4984c3219400004004",
+     "00b21a4984c321b000004004",
+     "00b21a4984c321b200000924",
+     "00b21a4984c3252000000924",
+     "00b21a4984c3250400000924",
+     "00b21a4984c3250000000924",
+     "00b21a4984c3219200000924",
+     "00b21a4984c3219000000924",
+     "00b21a4984c3219400000924",
+     "00b21a4984c321b000000924",
+     "00b21a4984c3219600000924",
+     "00b21a4984c321b200004020",
+     "00b21a4984c3252000004020",
+     "00b21a4984c3250400004020",
+     "00b21a4984c3250000004020",
+     "00b21a4984c3219200004020",
+     "00b21a4984c3219000004020",
+     "00b21a4984c3219400004020",
+     "00b21a4984c321b000004020",
+     "00b21a4984c3219600004020"
+    ]
+   }
+  }
+ ]
+}

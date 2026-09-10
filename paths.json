@@ -1,0 +1,482 @@
+[
+ {
+  "path": "/geosot/decimal2quaternary",
+  "method": "post",
+  "summary": "2D网格编码的进制转换(十进制转换为四进制)",
+  "params": []
+ },
+ {
+  "path": "/geosot/quaternary2decimal",
+  "method": "post",
+  "summary": "2D网格编码的进制转换(四进制转换为十进制)",
+  "params": []
+ },
+ {
+  "path": "/geosot/decimal2binary",
+  "method": "post",
+  "summary": "2D网格编码的进制转换(十进制转换为二进制)",
+  "params": []
+ },
+ {
+  "path": "/geosot/binary2decimal",
+  "method": "post",
+  "summary": "2D网格编码的进制转换(二进制转换为十进制)",
+  "params": []
+ },
+ {
+  "path": "/geosot/bit_extract_geo_num",
+  "method": "post",
+  "summary": "按位提取2D网格编码(十进制)",
+  "params": []
+ },
+ {
+  "path": "/geosot/geography_mean_geo_num",
+  "method": "post",
+  "summary": "2D网格编码地理含义真实性判断",
+  "params": []
+ },
+ {
+  "path": "/geosot/center_point",
+  "method": "post",
+  "summary": "2D网格中心经纬度",
+  "params": []
+ },
+ {
+  "path": "/geosot/center_point2",
+  "method": "post",
+  "summary": "经纬度对应2D网格的中心经纬度",
+  "params": []
+ },
+ {
+  "path": "/geosot/location_point",
+  "method": "post",
+  "summary": "2D网格的定位点经纬度",
+  "params": []
+ },
+ {
+  "path": "/geosot/scope_geo_num",
+  "method": "post",
+  "summary": "2D网格编码的经纬度范围",
+  "params": []
+ },
+ {
+  "path": "/geosot/move_geo_num",
+  "method": "post",
+  "summary": "2D网格相对位移",
+  "params": []
+ },
+ {
+  "path": "/geosot/lng_lat2row_col",
+  "method": "post",
+  "summary": "经纬度转换为对应2D网格行列号",
+  "params": []
+ },
+ {
+  "path": "/geosot/row_col2lng_lat",
+  "method": "post",
+  "summary": "2D网格行列号转所在网格中心经纬度",
+  "params": []
+ },
+ {
+  "path": "/geosot/sort_layer_geo_num_list",
+  "method": "post",
+  "summary": "2D网格编码排序(按层级)",
+  "params": []
+ },
+ {
+  "path": "/geosot/sort_asc_geo_num_list",
+  "method": "post",
+  "summary": "2D网格编码排序(按编码值)",
+  "params": []
+ },
+ {
+  "path": "/geosot/geo_num2row_col",
+  "method": "post",
+  "summary": "2D网格码转换为所在行列序号",
+  "params": []
+ },
+ {
+  "path": "/geosot/row_col2geo_num",
+  "method": "post",
+  "summary": "2D网格行列序号转换为2D网格码",
+  "params": []
+ },
+ {
+  "path": "/geosot/geo_num2beidou_grid_code",
+  "method": "post",
+  "summary": "2D网格码转北斗网格码",
+  "params": []
+ },
+ {
+  "path": "/geosot/beidou_grid_code2geo_num",
+  "method": "post",
+  "summary": "北斗网格码转2D网格码",
+  "params": []
+ },
+ {
+  "path": "/geosot/show_geo_num",
+  "method": "post",
+  "summary": "经纬矩形所在的2D网格的经线数组和纬线数组",
+  "params": []
+ },
+ {
+  "path": "/geosot/point",
+  "method": "post",
+  "summary": "2D网格编码(点)",
+  "params": []
+ },
+ {
+  "path": "/geosot/multi_point",
+  "method": "post",
+  "summary": "2D网格编码(多点)",
+  "params": []
+ },
+ {
+  "path": "/geosot/line",
+  "method": "post",
+  "summary": "2D网格编码(线)",
+  "params": []
+ },
+ {
+  "path": "/geosot/multi_line",
+  "method": "post",
+  "summary": "2D网格编码(多线)",
+  "params": []
+ },
+ {
+  "path": "/geosot/rect",
+  "method": "post",
+  "summary": "2D网格编码(矩形)",
+  "params": []
+ },
+ {
+  "path": "/geosot/polygon",
+  "method": "post",
+  "summary": "2D网格编码(多边形)",
+  "params": []
+ },
+ {
+  "path": "/geosot/multi_polygon",
+  "method": "post",
+  "summary": "2D网格编码(多多边形)",
+  "params": []
+ },
+ {
+  "path": "/geosot/geojson",
+  "method": "post",
+  "summary": "2D网格编码(GeoJSON 格式)",
+  "params": []
+ },
+ {
+  "path": "/geosot/aggregation_geo_num",
+  "method": "post",
+  "summary": "2D网格聚合(网格编码数组)",
+  "params": []
+ },
+ {
+  "path": "/geosot/aggregation_geo_num2",
+  "method": "post",
+  "summary": "2D网格聚合(多边形)",
+  "params": []
+ },
+ {
+  "path": "/geosot/sphere_distance_geo_num",
+  "method": "post",
+  "summary": "2D网格间球面距离",
+  "params": []
+ },
+ {
+  "path": "/geosot/ellipsoid_distance_geo_num",
+  "method": "post",
+  "summary": "2D网格间椭球面距离",
+  "params": []
+ },
+ {
+  "path": "/geosot/position_geo_num",
+  "method": "post",
+  "summary": "2D网格相对位置关系",
+  "params": []
+ },
+ {
+  "path": "/geosot/side_len_geo_num",
+  "method": "post",
+  "summary": "2D网格经向和纬向边长",
+  "params": []
+ },
+ {
+  "path": "/geosot/area_geo_num",
+  "method": "post",
+  "summary": "2D网格面积",
+  "params": []
+ },
+ {
+  "path": "/geosot/circumference_geo_num",
+  "method": "post",
+  "summary": "2D网格周长",
+  "params": []
+ },
+ {
+  "path": "/geosot/topological_relation_geo_num",
+  "method": "post",
+  "summary": "2D网格间拓扑类型判断(包含/相邻/相离)",
+  "params": []
+ },
+ {
+  "path": "/geosot/azimuth_geo_num",
+  "method": "post",
+  "summary": "2D网格定量方位计算",
+  "params": []
+ },
+ {
+  "path": "/geosot/adjoin_azimuth_geo_num",
+  "method": "post",
+  "summary": "2D网格指定方向的邻域网格(精确方向,输入方位角值)",
+  "params": []
+ },
+ {
+  "path": "/geosot/adjoin_direction_geo_num",
+  "method": "post",
+  "summary": "2D网格指定方向的邻域网格(模糊方向,如东南、西北)",
+  "params": []
+ },
+ {
+  "path": "/geosot/adjoin4_geo_num",
+  "method": "post",
+  "summary": "2D网格的 4 邻域",
+  "params": []
+ },
+ {
+  "path": "/geosot/adjoin8_geo_num",
+  "method": "post",
+  "summary": "2D网格的 8 邻域",
+  "params": []
+ },
+ {
+  "path": "/geosot/child_geo_num",
+  "method": "post",
+  "summary": "2D子网格编码",
+  "params": []
+ },
+ {
+  "path": "/geosot/son_geo_num_list",
+  "method": "post",
+  "summary": "2D子级网格编码范围",
+  "params": []
+ },
+ {
+  "path": "/geosot/parent_geo_num",
+  "method": "post",
+  "summary": "2D父网格编码",
+  "params": []
+ },
+ {
+  "path": "/geosot/area_geo_num_list",
+  "method": "post",
+  "summary": "2D网格集面积",
+  "params": []
+ },
+ {
+  "path": "/geosot/avg_distance_geo_num_list",
+  "method": "post",
+  "summary": "2D网格集平均距离",
+  "params": []
+ },
+ {
+  "path": "/geosot/orientation_direction_geo_num_list",
+  "method": "post",
+  "summary": "2D网格集与网格集间定性方向",
+  "params": []
+ },
+ {
+  "path": "/geosot/orientation_azimuth_geo_num_list",
+  "method": "post",
+  "summary": "2D网格集与网格集间定量方向",
+  "params": []
+ },
+ {
+  "path": "/geosot/topological_relation_geo_num_list",
+  "method": "post",
+  "summary": "2D网格集间拓扑类型判断(包含/相邻/相离)",
+  "params": []
+ },
+ {
+  "path": "/geosot/outer_rectangle_geo_num_list",
+  "method": "post",
+  "summary": "2D网格集最小外包矩形对应面片(面片可能数量 1~4 个,输出网格面片和对应层级)",
+  "params": []
+ },
+ {
+  "path": "/geosot/path_geo_num",
+  "method": "post",
+  "summary": "2D网格路径查询",
+  "params": []
+ },
+ {
+  "path": "/geosot/traversal_geo_num",
+  "method": "post",
+  "summary": "2D多边形内网格遍历",
+  "params": []
+ },
+ {
+  "path": "/geosot/video_model",
+  "method": "post",
+  "summary": "2D网格视频空间建模",
+  "params": []
+ },
+ {
+  "path": "/geosot/point_buffer",
+  "method": "post",
+  "summary": "2D点的缓冲区域",
+  "params": []
+ },
+ {
+  "path": "/geosot/line_buffer",
+  "method": "post",
+  "summary": "2D线的缓冲区域",
+  "params": []
+ },
+ {
+  "path": "/geosot/polygon_buffer",
+  "method": "post",
+  "summary": "2D面的缓冲区域",
+  "params": []
+ },
+ {
+  "path": "/geosot/overlay_analysis_intersection",
+  "method": "post",
+  "summary": "2D叠置分析(交)",
+  "params": []
+ },
+ {
+  "path": "/geosot/overlay_analysis_union",
+  "method": "post",
+  "summary": "2D叠置分析(并)",
+  "params": []
+ },
+ {
+  "path": "/geosot/grid_heat_gather",
+  "method": "post",
+  "summary": "2D网格热力汇聚",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/center_point3d",
+  "method": "post",
+  "summary": "3D网格中心经纬度",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/extract_geo_num_2d",
+  "method": "post",
+  "summary": "3D编码中提取2D编码",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/scope_geo_num",
+  "method": "post",
+  "summary": "3D网格体编码地理范围",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/point3d",
+  "method": "post",
+  "summary": "3D网格编码(点)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/sphere",
+  "method": "post",
+  "summary": "3D网格编码(球)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/rect3d",
+  "method": "post",
+  "summary": "3D网格编码(矩形体)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/polygon3d",
+  "method": "post",
+  "summary": "3D网格编码(多边形体)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/polyline3d",
+  "method": "post",
+  "summary": "3D网格编码(折线体)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/cylinder",
+  "method": "post",
+  "summary": "3D网格编码(圆柱)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/child_geo_num",
+  "method": "post",
+  "summary": "3D子网格编码",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/parent_geo_num",
+  "method": "post",
+  "summary": "3D父网格编码",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/adjoin6_geo_num",
+  "method": "post",
+  "summary": "3D网格体的 6 邻域",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/adjoin26_geo_num",
+  "method": "post",
+  "summary": "3D网格体的 26 邻域",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/relative_azimuth",
+  "method": "post",
+  "summary": "3D网格定量方位计算",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/distance_manhattan",
+  "method": "post",
+  "summary": "3D网格体之间距离编码(曼哈顿计算)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/aggregation_intersect",
+  "method": "post",
+  "summary": "3D网格集间相交关系判断",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/aggregation_adjoin",
+  "method": "post",
+  "summary": "3D网格集间相邻关系判断",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/aggregation_relationship",
+  "method": "post",
+  "summary": "3D网格集间拓扑类型关系判断(相邻/相交/相离)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/rcuboid_buffer",
+  "method": "post",
+  "summary": "3D网格编码(外包长方体)",
+  "params": []
+ },
+ {
+  "path": "/geosot3d/visual_analysis",
+  "method": "post",
+  "summary": "3D网格可视域分析",
+  "params": []
+ }
+]

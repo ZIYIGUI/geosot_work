@@ -1,0 +1,39 @@
+{
+  "type": "FeatureCollection",
+  "name": "空间封闭区域（禁飞区）",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"name": "临时禁飞区A", "zone_type": "no-fly", "effective_h": 500},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [116.3800, 39.9200],
+            [116.3900, 39.9200],
+            [116.3900, 39.9280],
+            [116.3850, 39.9300],
+            [116.3800, 39.9280],
+            [116.3800, 39.9200]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {"name": "临时禁飞区B", "zone_type": "no-fly", "effective_h": 300},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [116.3400, 39.8800],
+            [116.3480, 39.8800],
+            [116.3480, 39.8860],
+            [116.3400, 39.8860],
+            [116.3400, 39.8800]
+          ]
+        ]
+      }
+    }
+  ]
+}
