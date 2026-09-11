@@ -979,3 +979,134 @@ def gb_quaternary(binstr):
         b = '0' + b
     q = ''.join(str(int(b[i:i + 2], 2)) for i in range(0, len(b), 2))
     return 'G' + q
+
+
+# ------------------------------ 空域网格计算 ------------------------------
+def _point_in_polygon(lat, lng, polygon):
+    """射线法判断点 (lat, lng) 是否在多边形内。
+    polygon: [(lng, lat), ...] 顶点列表 (首尾可不闭合)。
+    """
+    inside = False
+    n = len(polygon)
+    j = n - 1
+    for i in range(n):
+        lng_i, lat_i = polygon[i]
+        lng_j, lat_j = polygon[j]
+        if (lat_i > lat) != (lat_j > lat) and \
+           lng < (lng_j - lng_i) * (lat - lat_i) / (lat_j - lat_i) + lng_i:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _polygon_cells_2d(polygon, level):
+    """计算多边形在指定层级下覆盖的 2D 网格集合 (行, 列)。
+    使用边界追踪 + 行填充算法:
+      1. 对多边形的每条边做 DDA 遍历，收集边界上的网格
+      2. 按行分组，对每行在最小列和最大列之间填充
+    返回: set of (row, col)
+    """
+    if len(polygon) < 3:
+        return set()
+
+    c = cells_per_deg(level)
+    n = len(polygon)
+
+    # 收集边界上的网格
+    boundary = set()
+    for i in range(n):
+        j = (i + 1) % n
+        lng0, lat0 = polygon[i]
+        lng1, lat1 = polygon[j]
+
+        # 将坐标转换为网格坐标
+        x0, y0 = lng0 * c, lat0 * c
+        x1, y1 = lng1 * c, lat1 * c
+
+        # DDA 遍历线段上的网格
+        dx, dy = x1 - x0, y1 - y0
+        steps = max(1, int(max(abs(dx), abs(dy)) * 2))
+        for k in range(steps + 1):
+            t = k / steps
+            x = x0 + dx * t
+            y = y0 + dy * t
+            col, row = int(math.floor(x)), int(math.floor(y))
+            boundary.add((row, col))
+
+    if not boundary:
+        return set()
+
+    # 按行分组
+    rows = {}
+    for r, cc in boundary:
+        rows.setdefault(r, []).append(cc)
+
+    # 行填充
+    cells = set()
+    for r in rows:
+        cols = rows[r]
+        for cc in range(min(cols), max(cols) + 1):
+            cells.add((r, cc))
+
+    return cells
+
+
+def airspace_grids(lower_polygon, upper_polygon, h_min, h_max, level):
+    """计算空域包含的 3D 网格编码。
+
+    空域由上下两个封闭多边形包围的空间构成:
+      - 下边界: lower_polygon 在高度 h_min 处 (米)
+      - 上边界: upper_polygon 在高度 h_max 处 (米)
+
+    空域的水平范围是两个多边形在水平面上的交集 (重叠区域)。
+    空域的垂直范围是从 h_min 到 h_max。
+
+    参数:
+        lower_polygon: 下边界多边形坐标 [(lng, lat), ...] (闭合或不闭合均可)
+        upper_polygon: 上边界多边形坐标 [(lng, lat), ...] (闭合或不闭合均可)
+        h_min: 下边界高度 (米, 大地高)
+        h_max: 上边界高度 (米, 大地高)
+        level: 网格层级 (3D 编码使用)
+
+    返回:
+        list: 空域包含的 3D 网格编码列表 (96 位有效, 可转 128 位)
+
+    示例:
+        # 定义一个矩形空域
+        lower = [(116.30, 39.90), (116.32, 39.90), (116.32, 39.92), (116.30, 39.92)]
+        upper = [(116.305, 39.905), (116.315, 39.905), (116.315, 39.915), (116.305, 39.915)]
+        codes = airspace_grids(lower, upper, 100, 500, level=15)
+    """
+    if h_min > h_max:
+        h_min, h_max = h_max, h_min
+
+    # Step 1: 计算两个多边形的 2D 网格集合
+    lower_cells = _polygon_cells_2d(lower_polygon, level)
+    upper_cells = _polygon_cells_2d(upper_polygon, level)
+
+    # 空域水平范围 = 两个多边形网格的交集
+    common_cells = lower_cells & upper_cells
+
+    if not common_cells:
+        return []
+
+    # Step 2: 计算高度范围 (高度层索引)
+    hc = height_cell(level)
+    if hc <= 0:
+        return []
+    h_min_idx = max(0, int(math.floor(h_min / hc)))
+    h_max_idx = int(math.floor(h_max / hc))
+
+    if h_min_idx > h_max_idx:
+        return []
+
+    # Step 3: 生成 3D 网格编码
+    # 对每个高度层，为交集中的每个网格生成 3D 编码
+    codes = []
+    for h_idx in range(h_min_idx, h_max_idx + 1):
+        for r, c in sorted(common_cells):
+            la = r << (32 - level)
+            ln = c << (32 - level)
+            codes.append(interleave3(la, ln, h_idx, order=(2, 0, 1), nbits=32))
+
+    return codes
