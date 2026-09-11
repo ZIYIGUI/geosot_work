@@ -26,7 +26,7 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))   # tests/
 sys.path.insert(0, _HERE)
-sys.path.insert(0, os.path.dirname(_HERE))           # 项目根 (geosot_work/)
+sys.path.insert(0, os.path.join(os.path.dirname(_HERE), 'src'))  # src/ 目录
 import geofile as gf
 import geosot_core as gc
 

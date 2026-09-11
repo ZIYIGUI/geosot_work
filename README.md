@@ -9,35 +9,53 @@ HTTP 层使用 FastAPI，测试既覆盖与 iwhere 黄金响应的逐字段比�
 
 ```
 geosot_work/
-├── geosot_core.py       # 编码核心库: 路线A/B、行列、子/父/邻域、3D、进制、距离、128位/16字节、GB附录D辅助
-├── geosot_service.py    # 几何服务层: 点/线/面/矩形/缓冲/聚合/外接矩形/路径/视频模型等
-├── app.py               # FastAPI 应用: 80 个接口 handler（与 YAML 路径一一对应）
-├── geofile.py           # 地理信息文件读取与编码映射: GeoJSON/SHP/CSV/WKT/KML/GPX
-├── test_all.py          # HTTP 黄金比对: 逐字段比对 geosot_examples.json（PASS/DIFF/FAIL/INFO/SKIP）
-├── restart_and_test.py  # 一键重启 uvicorn 服务并运行全量黄金回归
+├── src/                 # 源代码目录
+│   ├── geosot_core.py       # 编码核心库: 路线A/B、行列、子/父/邻域、3D、进制、距离、128位/16字节、GB附录D辅助
+│   ├── geosot_service.py    # 几何服务层: 点/线/面/矩形/缓冲/聚合/外接矩形/路径/视频模型等
+│   ├── app.py               # FastAPI 应用: 80 个接口 handler（与 YAML 路径一一对应）
+│   ├── geofile.py           # 地理信息文件读取与编码映射: GeoJSON/SHP/CSV/WKT/KML/GPX
+│   ├── test_all.py          # HTTP 黄金比对: 逐字段比对 geosot_examples.json（PASS/DIFF/FAIL/INFO/SKIP）
+│   └── restart_and_test.py  # 一键重启 uvicorn 服务并运行全量黄金回归
 │
 ├── data/                # 输入: 示例地理数据（无人机轨迹点 + 空间封闭区域）
-│   ├── uav_track.geojson     # 无人机飞行轨迹 (2 架次 LineString, 各 10 航点)
-│   ├── uav_points.csv        # 无人机轨迹航点表 (lon/lat/alt/时间/机号, 10 点)
-│   ├── uav_track3d.csv       # 3D 航线数据 (lon/lat/alt_m/时间/机号, 10 航点, 96 位 3D 码)
-│   └── closed_area.geojson   # 空间封闭区域 (2 个禁飞区 Polygon, 闭合环)
+│   ├── uav_track.geojson        # 无人机飞行轨迹 (2 架次 LineString, 各 10 航点)
+│   ├── uav_points.csv           # 无人机轨迹航点表 (lon/lat/alt/时间/机号, 10 点)
+│   ├── uav_track3d.csv          # 3D 航线数据 (lon/lat/alt_m/时间/机号, 10 航点, 96 位 3D 码)
+│   ├── closed_area.geojson      # 空间封闭区域 (2 个禁飞区 Polygon, 闭合环)
+│   ├── uav_conflict_1.csv       # 冲突轨迹1 (10000 航点, 用于 PSI 测试)
+│   └── uav_conflict_2.csv       # 冲突轨迹2 (10000 航点, 与轨迹1约5100个冲突点)
 │
-├── out/                 # 输出: 编码提取产物（由 tests/encode_data.py 与 tests/coords_to_json.py 生成）
+├── out/                 # 输出: 编码提取产物
 │   ├── codes.json            # 全部提取编码 (类型/码/层级/维度/128位/16字节hex/属性)
 │   ├── codes_128.bin         # 每条 16 字节(128 位) 大端连续写入 (2D 低 8 字节, 3D 低 12 字节)
 │   ├── codes_16bytes.csv     # CSV 仅一列 bytes16_hex, 与 bin 逐条对应
-│   └── http_like_response.json  # 坐标 -> HTTP 格式 JSON 响应（19 接口, 全部 status:200）
+│   ├── http_like_response.json  # 坐标 -> HTTP 格式 JSON 响应（19 接口, 全部 status:200）
+│   ├── conflict_codes_128.bin   # 轨迹冲突检测的交集编码 (128位二进制)
+│   ├── trajectory_party1.bin    # PSI 输入: 轨迹1编码
+│   ├── trajectory_party2.bin    # PSI 输入: 轨迹2编码
+│   ├── psi_result_party1.bin    # PSI 输出: 交集结果 (二进制)
+│   └── psi_out.bin              # PSI 单独执行的输出
 │
-├── tests/               # 非 HTTP 测试套件 (unittest, 零第三方依赖) + 可独立执行的脚本
-│   ├── test_gbt40087.py      # GB/T 40087 附录 D/A/B 标准符合性测试
-│   ├── test_unit.py          # 核心函数单元测试 + 黄金样例直测
-│   ├── test_geofile.py       # 地理信息文件解析与编码映射测试
-│   ├── test_data_encode.py   # data/ -> out/ 数据编码流水线测试
-│   ├── encode_data.py        # 数据编码脚本: data/ -> 网格编码提取 -> out/（可独立执行）
-│   └── coords_to_json.py     # 非单元测试: 坐标 -> 与 HTTP 返回格式一致的 JSON（可独立执行）
+├── tests/               # 测试套件 (unittest) + 可独立执行的脚本
+│   ├── test_gbt40087.py         # GB/T 40087 附录 D/A/B 标准符合性测试
+│   ├── test_unit.py             # 核心函数单元测试 + 黄金样例直测
+│   ├── test_geofile.py          # 地理信息文件解析与编码映射测试
+│   ├── test_data_encode.py      # data/ -> out/ 数据编码流水线测试
+│   ├── test_trajectory_conflict.py  # 无人机轨迹冲突检测 (编码 + 集合交集)
+│   ├── test_psi_trajectory.py   # 无人机轨迹 PSI 计算 (调用 psi/frontend.exe)
+│   ├── gen_large_trajectories.py    # 生成大规模轨迹数据 (10000 航点)
+│   ├── encode_data.py           # 数据编码脚本: data/ -> 网格编码提取 -> out/
+│   └── coords_to_json.py        # 坐标 -> 与 HTTP 返回格式一致的 JSON
 │
-├── geosot_examples.json  # iwhere 黄金响应（test_all.py / tests/test_unit.py 读取）
-├── GeoSOT-iwhere-openapi.yaml  # 接口定义（80 个路径, test_all.py 读取）
+├── psi/                 # PSI (隐私集合交集) 工具
+│   └── frontend.exe           # PSI 可执行文件
+│
+├── geosot_examples.json       # iwhere 黄金响应（src/test_all.py / tests/test_unit.py 读取）
+├── GeoSOT-iwhere-openapi.yaml # 接口定义（80 个路径, src/test_all.py 读取）
+├── paths.json                 # 接口路径列表
+├── schemas.json               # 接口 schema 定义
+├── std_text.txt               # 标准文本参考
+└── manual_text.txt            # 手动整理文本
 
 测试套件运行:  python -m unittest discover -s tests -v
 ```
@@ -49,19 +67,19 @@ geosot_work/
 
 ```powershell
 # 1. 启动 HTTP 服务（默认 127.0.0.1:8000）
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
+cd src && python -m uvicorn app:app --host 127.0.0.1 --port 8000
 # 或一键重启 + 回归:
-python restart_and_test.py
+python src\restart_and_test.py
 
 # 2. 全量黄金比对（80 路径, 逐字段）
-python test_all.py
+python src\test_all.py
 
 # 3. 非 HTTP 测试套件（GB/T 40087 示例 + 单元测试 + 文件解析）
 python -m unittest discover -s tests -v
 
 # 4. 地理信息文件 -> 网格编码（CLI）
-python geofile.py input.geojson --level 15 --route B --out result.json
-python geofile.py input.shp --level 20 --route B
+python src\geofile.py input.geojson --level 15 --route B --out result.json
+python src\geofile.py input.shp --level 20 --route B
 
 # 5. data/ 示例数据 -> 网格编码提取 -> out/（默认 21 级, 1" 网格）
 python tests\encode_data.py --level 21 --route B
@@ -320,3 +338,108 @@ python tests\coords_to_json.py --lat 39.9102778 --lng 116.3152778 --height 500 -
 - 服务重启闭环: `restart_and_test.py`（查进程 → 启动 → 轮询 → 全量回归）。
 - 文件映射 `geofile.py` 为纯标准库实现（GeoJSON/SHP/CSV/WKT/KML/GPX），
   可直接作为非 HTTP 编码入口，也可经 CLI 批量处理。
+
+## 十、无人机轨迹冲突检测与 PSI 计算
+
+### 10.1 轨迹数据
+
+`data/` 目录包含两份大规模无人机轨迹文件，用于演示航线冲突检测：
+
+| 文件 | 航点数 | 覆盖区域 |
+|------|--------|----------|
+| `uav_conflict_1.csv` | 10000 | 中心 (116.300, 39.910)，约 3.4km × 3km |
+| `uav_conflict_2.csv` | 10000 | 中心 (116.303, 39.910)，约 3.4km × 3km |
+
+两条轨迹覆盖区域重叠约 95%，产生 **5100 个航线冲突点**（在同一 21 级网格内）。
+
+使用 `tests/gen_large_trajectories.py` 可重新生成轨迹数据：
+
+```powershell
+python tests/gen_large_trajectories.py
+```
+
+### 10.2 轨迹冲突检测
+
+`tests/test_trajectory_conflict.py` 实现轨迹冲突检测：
+
+1. 读取两份轨迹 CSV 文件
+2. 为每个航点生成 21 级网格编码（路线 B）
+3. 计算两个编码集合的交集（冲突点）
+4. 将交集编码以 128 位二进制保存到 `out/conflict_codes_128.bin`
+
+```powershell
+# 独立运行（显示各阶段耗时）
+python tests/test_trajectory_conflict.py
+
+# 运行 unittest
+python -m unittest tests.test_trajectory_conflict -v
+```
+
+输出示例：
+
+```
+[1] 读取轨迹文件耗时: 0.0268 秒
+[2] 轨迹编码耗时: 0.0621 秒
+[3] 计算交集耗时: 0.0020 秒
+[4] 保存二进制文件耗时: 0.0014 秒
+交集大小: 5100 个编码
+总耗时: 0.0923 秒
+```
+
+### 10.3 PSI（隐私集合交集）计算
+
+`tests/test_psi_trajectory.py` 调用 `psi/frontend.exe` 进行 PSI 计算：
+
+1. 读取两份轨迹文件，编码后分别保存为 `out/trajectory_party1.bin` 和 `out/trajectory_party2.bin`
+2. 启动两方 PSI 协议（Receiver/Sender）进行隐私集合交集计算
+3. 交集结果保存到 `out/psi_result_party1.bin`
+
+```powershell
+python tests/test_psi_trajectory.py
+```
+
+输出文件：
+
+| 文件 | 大小 | 说明 |
+|------|------|------|
+| `trajectory_party1.bin` | 160000 字节 | 轨迹1编码 (10000 × 16) |
+| `trajectory_party2.bin` | 160000 字节 | 轨迹2编码 (10000 × 16) |
+| `psi_result_party1.bin` | 81600 字节 | PSI 交集结果 (5100 × 16) |
+
+单独执行 PSI 的两方命令：
+
+```powershell
+# Receiver (Server) - 获得交集结果
+./psi/frontend.exe -in ./out/trajectory_party1.bin -r 1 -server 1 -out ./out/psi_out.bin -noSort -receiverSize 10000 -senderSize 10000 -nt 8
+
+# Sender (Client) - 不获得结果（PSI 协议设计）
+./psi/frontend.exe -in ./out/trajectory_party2.bin -r 0 -server 0 -noSort -receiverSize 10000 -senderSize 10000 -nt 8
+```
+
+PSI 执行详情：
+
+```
+[Client/Sender]
+  - reading set: 18ms
+  - connecting: 0ms
+  - running PSI: 28ms
+
+[Server/Receiver]
+  - reading set: 8ms
+  - connecting: 514ms (等待客户端)
+  - running PSI: 28ms
+  - Writing output: 0ms
+
+结果: 5100 个交集元素
+```
+
+性能数据：
+
+| 阶段 | 耗时 |
+|------|------|
+| 轨迹1编码 | ~0.04 秒 |
+| 轨迹2编码 | ~0.03 秒 |
+| PSI 计算 | ~0.56 秒 |
+| **总耗时** | **~0.63 秒** |
+
+> **注意**: PSI 协议中只有 Receiver 会获得交集结果，Sender 不会得到输出，这是隐私集合交集协议的正常设计。
