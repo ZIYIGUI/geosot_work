@@ -188,15 +188,21 @@ class TestBinary128(unittest.TestCase):
 
     def test_bytes16_2d(self):
         code = gc.geo_num_routeB(39.91, 116.31, 15)[0]
-        buf = gc.to_bytes16(code)
+        buf = gc.to_bytes16(code, level=15)
         self.assertEqual(len(buf), 16)
-        self.assertEqual(gc.from_bytes16(buf), code)
+        restored_code, level, dim = gc.from_bytes16(buf)
+        self.assertEqual(restored_code, code)
+        self.assertEqual(level, 15)
+        self.assertEqual(dim, 2)
 
     def test_bytes16_3d(self):
         code = gc.geo_num3d(39.9, 116.3, 1000, 15)
-        buf = gc.to_bytes16(code, dim=3)
+        buf = gc.to_bytes16(code, dim=3, level=15)
         self.assertEqual(len(buf), 16)
-        self.assertEqual(gc.from_bytes16(buf, dim=3), code)
+        restored_code, level, dim = gc.from_bytes16(buf)
+        self.assertEqual(restored_code, code)
+        self.assertEqual(level, 15)
+        self.assertEqual(dim, 3)
 
 
 class TestMeasure(unittest.TestCase):

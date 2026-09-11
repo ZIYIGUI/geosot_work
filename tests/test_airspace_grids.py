@@ -133,10 +133,11 @@ class TestAirspaceGrids(unittest.TestCase):
             bin_path = os.path.join(OUT_DIR, 'airspace_grids.bin')
             os.makedirs(OUT_DIR, exist_ok=True)
 
+            level = 15  # 测试使用的层级
             with open(bin_path, 'wb') as f:
                 for code in codes:
-                    # 3D 码使用 dim=3
-                    buf = gc.to_bytes16(code, dim=3)
+                    # 3D 码使用 dim=3, 并保存层级信息
+                    buf = gc.to_bytes16(code, dim=3, level=level)
                     f.write(buf)
 
             # 验证文件大小
@@ -151,8 +152,11 @@ class TestAirspaceGrids(unittest.TestCase):
             restored_codes = []
             for i in range(0, len(data), 16):
                 buf = data[i:i+16]
-                code = gc.from_bytes16(buf, dim=3)
+                code, restored_level, dim = gc.from_bytes16(buf)
                 restored_codes.append(code)
+                # 验证层级和维度
+                self.assertEqual(restored_level, level)
+                self.assertEqual(dim, 3)
 
             self.assertEqual(set(restored_codes), set(codes),
                            "读回的编码应与原编码一致")
@@ -232,8 +236,8 @@ def main():
 
         with open(bin_path, 'wb') as f:
             for code in codes:
-                # 3D 码使用 dim=3
-                buf = gc.to_bytes16(code, dim=3)
+                # 3D 码使用 dim=3, 并保存层级信息
+                buf = gc.to_bytes16(code, dim=3, level=level)
                 f.write(buf)
 
         file_size = os.path.getsize(bin_path)

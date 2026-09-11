@@ -76,7 +76,7 @@ def encode_3d_csv(path, level=21):
             'code_level': level,
             'dim': 3,
             'binary128': gc.to_binary128(code, level, dim=3),
-            'bytes16_hex': gc.to_bytes16(code, dim=3).hex(),
+            'bytes16_hex': gc.to_bytes16(code, dim=3, level=level).hex(),
             'props': dict(row),
         })
     return results

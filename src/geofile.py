@@ -542,7 +542,7 @@ def _mk(code, level, gtype, props, with_128):
             'code_level': level, 'props': dict(props)}
     if with_128:
         item['binary128'] = gc.to_binary128(code, level)
-        item['bytes16_hex'] = gc.to_bytes16(code).hex()
+        item['bytes16_hex'] = gc.to_bytes16(code, level=level).hex()
     return item
 
 

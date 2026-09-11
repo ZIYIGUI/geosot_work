@@ -160,7 +160,7 @@ class TestTrajectoryConflict(unittest.TestCase):
         restored_codes = []
         for i in range(0, len(data), 16):
             buf = data[i:i+16]
-            code = gc.from_bytes16(buf, dim=2)
+            code, _level, _dim = gc.from_bytes16(buf)
             restored_codes.append(code)
 
         self.assertEqual(set(restored_codes), conflicts)

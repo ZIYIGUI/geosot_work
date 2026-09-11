@@ -583,6 +583,181 @@ def topological_relation_geo_num(code1, level1, code2, level2):
         return 4
     return 5
 
+# ------------------------------ 层级检测与体积计算 ------------------------------
+def detect_level_from_code(code, dim=2):
+    """从网格编码反推层级 (启发式估计, 仅用于旧格式)。
+
+    **重要**: 推荐使用新的 16 字节自描述格式 (见 to_bytes16/from_bytes16)，
+    该格式直接存储 level 和 dim 信息，无需启发式检测。
+
+    本函数仅用于处理旧格式数据（仅存储 geo_num 数值，无 level 元数据）。
+
+    原理:
+        路线B 2D码: code = morton(r,c,level) << (64 - 2*level)
+        理论上 64 - trailing_zeros(code) ≈ 2 * level
+        但 morton 编码本身的行/列值可能有尾随零位，导致估计偏差。
+
+    参数:
+        code: 网格编码值 (整数)
+        dim: 2 表示 2D 码 (64位), 3 表示 3D 码 (96位)
+
+    返回:
+        level: 层级估计值 (可能不准确), 若无法检测则返回 None
+    """
+    if code == 0:
+        return None
+
+    # 方法: 计算尾随零位数，推断移位量
+    trailing_zeros = 0
+    temp = code
+    while temp > 0 and (temp & 1) == 0:
+        trailing_zeros += 1
+        temp >>= 1
+
+    if dim == 3:
+        # 3D 码: 96 位, 每层 3 位
+        # shift = 96 - 3*level, 所以 level ≈ (96 - trailing_zeros) / 3
+        level = (96 - trailing_zeros) // 3
+    else:
+        # 2D 码: 64 位, 每层 2 位
+        # shift = 64 - 2*level, 所以 level ≈ (64 - trailing_zeros) / 2
+        level = (64 - trailing_zeros) // 2
+
+    # 验证层级有效性
+    if level < 0 or level > 32:
+        return None
+
+    return int(level)
+
+
+def grid_info_from_bytes16(buf):
+    """从 16 字节自描述格式获取网格完整信息。
+
+    新格式 (v2) 的 16 字节包含 geo_num、level、dim，可完整恢复所有信息。
+
+    参数:
+        buf: 16 字节数据
+
+    返回:
+        dict: {
+            'code': geo_num 编码值,
+            'level': 层级 (0-32),
+            'dim': 维度 (2 或 3)
+        }
+    """
+    code, level, dim = from_bytes16(buf)
+    return {'code': code, 'level': level, 'dim': dim}
+
+def grid_volume(code, level=None, dim=2):
+    """计算网格体积 (立方米)。
+
+    对于 2D 码, 计算该层级网格在赤道处的面积乘以高度单元高度。
+    对于 3D 码, 解码得到实际位置后计算精确体积。
+
+    参数:
+        code: 网格编码值
+        level: 层级 (若为 None 则自动检测)
+        dim: 2 表示 2D 码, 3 表示 3D 码
+
+    返回:
+        volume: 网格体积 (立方米), 若无法计算则返回 None
+    """
+    if level is None:
+        level = detect_level_from_code(code, dim)
+        if level is None:
+            return None
+
+    cd = cell_deg(level)  # 网格边长 (度)
+    hc = height_cell(level)  # 高度单元高度 (米)
+
+    if dim == 3:
+        # 3D 码: 解码得到实际经纬度, 计算精确面积
+        try:
+            _h_idx, lat_pack, _lng_pack = decode_geo_num3d(code, level)
+            # 从 pack 还原经纬度 (简化处理, 使用中心点)
+            lat_deg = dms2deg(*unpack_dms(lat_pack), level=level)
+            lat1 = math.radians(lat_deg)
+            lat2 = math.radians(lat_deg + cd)
+            area = (math.pi / 180) * cd * R_SPHERE ** 2 * abs(math.sin(lat2) - math.sin(lat1))
+        except:
+            # 解码失败时使用赤道近似
+            area = (cd * THETA0 * R0) ** 2
+    else:
+        # 2D 码: 尝试解码经纬度, 失败时使用赤道近似
+        try:
+            lb = location_point(code, level)
+            lat = lb[1]
+            lat1 = math.radians(lat)
+            lat2 = math.radians(lat + cd)
+            area = (math.pi / 180) * cd * R_SPHERE ** 2 * abs(math.sin(lat2) - math.sin(lat1))
+        except:
+            area = (cd * THETA0 * R0) ** 2
+
+    return area * hc
+
+def grid_dimensions(code, level=None, dim=2):
+    """获取网格的三维尺寸信息。
+
+    参数:
+        code: 网格编码值
+        level: 层级 (若为 None 则自动检测)
+        dim: 2 表示 2D 码, 3 表示 3D 码
+
+    返回:
+        dict: {
+            'level': 层级,
+            'lat_edge': 南北边长 (米),
+            'lng_edge_south': 南边东西边长 (米),
+            'lng_edge_north': 北边东西边长 (米),
+            'height': 高度单元高度 (米),
+            'area_2d': 2D 面积 (平方米),
+            'volume': 3D 体积 (立方米)
+        }
+    """
+    if level is None:
+        level = detect_level_from_code(code, dim)
+        if level is None:
+            return None
+
+    cd = cell_deg(level)
+    hc = height_cell(level)
+
+    # 尝试获取精确位置
+    try:
+        if dim == 3:
+            _h_idx, lat_pack, _lng_pack = decode_geo_num3d(code, level)
+            lat_deg = dms2deg(*unpack_dms(lat_pack), level=level)
+        else:
+            lb = location_point(code, level)
+            lat_deg = lb[1]
+
+        lat1 = math.radians(lat_deg)
+        lat2 = math.radians(lat_deg + cd)
+
+        # 边长计算
+        ns = cd * THETA0 * R0  # 南北边长
+        ew_south = cd * THETA0 * R0 * math.cos(lat1)  # 南边东西
+        ew_north = cd * THETA0 * R0 * math.cos(lat2)  # 北边东西
+
+        # 面积 (球面带矩形)
+        area = (math.pi / 180) * cd * R_SPHERE ** 2 * abs(math.sin(lat2) - math.sin(lat1))
+
+    except:
+        # 赤道近似
+        ns = cd * THETA0 * R0
+        ew_south = ew_north = cd * THETA0 * R0
+        area = ns * ew_south
+
+    return {
+        'level': level,
+        'lat_edge': ns,
+        'lng_edge_south': ew_south,
+        'lng_edge_north': ew_north,
+        'height': hc,
+        'area_2d': area,
+        'volume': area * hc
+    }
+
 # ------------------------------ 北斗网格码 ------------------------------
 # 层级结构: 1: 6°×4° (lng2+lat1), 2: 30′×30′ (1+1), 3: 15′×10′ (Z1),
 #           4: 1′×1′ (1+1), 5: 4″×4″ (1+1), 6: 2″×2″ (Z1), 7: 0.25″×0.25″ (1+1),
@@ -918,20 +1093,102 @@ def from_binary128(binstr, dim=2):
     return int(s[-64:], 2)
 
 
-def to_bytes16(code, dim=2):
-    """编码值 -> 16 字节 (大端序, 高位对齐, 低位补 0)。
-    dim=2: 64 位码存入前 8 字节; dim=3: 96 位码存入前 12 字节。"""
-    if dim == 3:
-        return code.to_bytes(16, 'big')
-    return code.to_bytes(16, 'big')
+def to_bytes16(code, dim=2, level=None):
+    """编码值 -> 16 字节 (包含层级和维度信息)。
+
+    新的 16 字节格式 (自描述):
+        Byte 0-7:   geo_num 低 64 位 (大端序)
+        Byte 8-11:  geo_num 高 32 位 (3D 时使用, 2D 时为 0)
+        Byte 12:    level (0-32, 若未提供则为 0)
+        Byte 13:    dim (2 或 3)
+        Byte 14-15: reserved (0)
+
+    参数:
+        code: 网格编码值 (整数)
+        dim: 2 表示 2D 码 (64位), 3 表示 3D 码 (96位)
+        level: 层级 (0-32), 若为 None 则存储为 0
+
+    返回:
+        bytes: 16 字节
+    """
+    # 提取 geo_num 的各部分
+    code_low = code & 0xFFFFFFFFFFFFFFFF  # 低 64 位
+    code_high = (code >> 64) & 0xFFFFFFFF  # 高 32 位 (仅 3D 使用)
+
+    # 构建 16 字节
+    buf = bytearray(16)
+
+    # Byte 0-7: geo_num 低 64 位 (大端序)
+    buf[0:8] = code_low.to_bytes(8, 'big')
+
+    # Byte 8-11: geo_num 高 32 位
+    buf[8:12] = code_high.to_bytes(4, 'big')
+
+    # Byte 12: level
+    buf[12] = level if level is not None else 0
+
+    # Byte 13: dim
+    buf[13] = dim
+
+    # Byte 14-15: reserved (已经初始化为 0)
+
+    return bytes(buf)
 
 
-def from_bytes16(buf, dim=2):
-    """16 字节 -> 编码值。大端存储下低 64/96 位在字节尾部: dim=2 取末尾 8 字节, dim=3 取末尾 12 字节。"""
+def from_bytes16(buf, _dim=None):
+    """16 字节 -> (编码值, 层级, 维度)。
+
+    从新的 16 字节自描述格式中恢复完整信息。
+
+    参数:
+        buf: 16 字节数据
+        _dim: (已废弃) 保留参数以保持向后兼容, 实际从 buf 中读取
+
+    返回:
+        tuple: (code, level, dim)
+            - code: 网格编码值 (整数)
+            - level: 层级 (0-32)
+            - dim: 维度 (2 或 3)
+    """
     b = bytes(buf)
-    if dim == 3:
-        return int.from_bytes(b[-12:], 'big')
-    return int.from_bytes(b[-8:], 'big')
+    if len(b) != 16:
+        raise ValueError(f"Expected 16 bytes, got {len(b)}")
+
+    # Byte 0-7: geo_num 低 64 位
+    code_low = int.from_bytes(b[0:8], 'big')
+
+    # Byte 8-11: geo_num 高 32 位
+    code_high = int.from_bytes(b[8:12], 'big')
+
+    # Byte 12: level
+    level = b[12]
+
+    # Byte 13: dim
+    stored_dim = b[13]
+
+    # 重建 geo_num
+    if stored_dim == 3:
+        code = (code_high << 64) | code_low
+    else:
+        code = code_low
+
+    return code, level, stored_dim
+
+
+def from_bytes16_legacy(buf, dim=2):
+    """(向后兼容) 16 字节 -> 编码值。
+
+    旧版本接口, 仅返回 code 值。建议使用 from_bytes16() 获取完整信息。
+
+    参数:
+        buf: 16 字节数据
+        dim: 2 表示 2D 码, 3 表示 3D 码 (已废弃, 从 buf 中读取)
+
+    返回:
+        int: 网格编码值
+    """
+    code, _level, _stored_dim = from_bytes16(buf, dim)
+    return code
 
 
 def code_to_binary128(code, level, dim=2):

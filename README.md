@@ -259,9 +259,49 @@ python tests\encode_data.py --level 21 --route B
 | 文件 | 格式 | 说明 |
 |------|------|------|
 | `codes.json` | JSON | 全部 1983 条编码（1973 条 2D + 10 条 3D），含 source/type/code/code_level/dim/binary128/bytes16_hex/props |
-| `codes_128.bin` | 二进制 | 每条编码 16 字节（128 位）大端连续写入，共 16×1983 = 31728 字节；2D 码占低 8 字节、3D 码占低 12 字节 |
+| `codes_128.bin` | 二进制 | 每条编码 16 字节（128 位）**自描述格式**，含 geo_num + level + dim，共 16×1983 = 31728 字节 |
 | `codes_16bytes.csv` | CSV | **仅一列 bytes16_hex**（每行 32 个 hex 字符），与 bin 逐条对应 |
 | `http_like_response.json` | JSON | `tests/coords_to_json.py` 产物: 坐标 -> HTTP 格式 JSON 响应（19 接口, 全部 status:200） |
+
+#### 16 字节自描述格式（v2）
+
+每条编码占用 16 字节（128 位），字节布局如下：
+
+```
+┌─────────────────────────────────────────────┐
+│ Byte 0-7:   geo_num 低 64 位 (8 bytes)      │
+├─────────────────────────────────────────────┤
+│ Byte 8-11:  geo_num 高 32 位 (4 bytes, 3D用)│
+├─────────────────────────────────────────────┤
+│ Byte 12:    level (1 byte, 0-32)            │
+├─────────────────────────────────────────────┤
+│ Byte 13:    dim (1 byte, 2 或 3)            │
+├─────────────────────────────────────────────┤
+│ Byte 14-15: reserved (2 bytes, 零填充)      │
+└─────────────────────────────────────────────┘
+```
+
+**优势**：
+- **自描述**：从二进制文件可完整恢复 geo_num、level、dim 所有信息
+- **无需额外元数据**：层级信息内置于 16 字节中
+- **向后兼容**：提供 `from_bytes16_legacy()` 函数仅返回 code
+
+**使用示例**：
+
+```python
+import geosot_core as gc
+
+# 编码（保存时）
+code, r, c = gc.geo_num_routeB(30.55, 120.05, level=19)
+buf = gc.to_bytes16(code, dim=2, level=19)  # 16 字节
+
+# 解码（读取时，完整信息）
+restored_code, level, dim = gc.from_bytes16(buf)
+print(f"code={restored_code}, level={level}, dim={dim}")
+
+# 解码（仅 code，向后兼容）
+code_only = gc.from_bytes16_legacy(buf)
+```
 
 `http_like_response.json` 概览:
 ```json
@@ -275,8 +315,11 @@ geo_num2row_col / row_col2geo_num / row_col2lng_lat / child_geo_num / parent_geo
 adjoin4_geo_num / adjoin8_geo_num / geo_num2beidou_grid_code / beidou_grid_code2geo_num /
 point3d / center_point3d / extract_geo_num_2d / adjoin6_geo_num / adjoin26_geo_num。
 
-bin/csv 顺序一致，任一条可按 `codes.json` 中的 `dim` 用
-`geosot_core.from_bytes16(buf, dim)` / `from_binary128(s, dim)` 无损还原。
+bin/csv 顺序一致，任一条可从 16 字节自描述格式完整恢复：
+```python
+code, level, dim = gc.from_bytes16(buf)  # 返回 (geo_num, level, dim)
+```
+或按 `codes.json` 中的 `dim` 用 `from_binary128(s, dim)` 无损还原。
 
 #### 产物实例（真实输出摘录）
 

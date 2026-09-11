@@ -18,7 +18,9 @@ import sys
 import unittest
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, BASE)
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, TESTS_DIR)  # for encode_data
+sys.path.insert(0, os.path.join(BASE, 'src'))  # for geofile, geosot_core
 import encode_data as ed
 import geofile as gf
 import geosot_core as gc
@@ -149,7 +151,8 @@ class TestOutputs(unittest.TestCase):
         for i, r in enumerate(self.results):
             buf = blob[i * 16:(i + 1) * 16]
             code = int(r['code'].split('-')[0])
-            self.assertEqual(gc.from_bytes16(buf, dim=r['dim']), code,
+            restored_code, _level, _dim = gc.from_bytes16(buf)
+            self.assertEqual(restored_code, code,
                              'bin 第 %d 条 (dim=%d)' % (i, r['dim']))
 
     def test_csv_roundtrip(self):
@@ -158,7 +161,14 @@ class TestOutputs(unittest.TestCase):
         for i, row in enumerate(rows):
             r = self.results[i]
             code = int(r['code'].split('-')[0])
-            self.assertEqual(int(row[0], 16), code, 'csv 第 %d 条' % i)
+            expected_level = r['code_level']
+            expected_dim = r['dim']
+            # 从 hex 解码 16 字节
+            buf = bytes.fromhex(row[0])
+            restored_code, restored_level, restored_dim = gc.from_bytes16(buf)
+            self.assertEqual(restored_code, code, 'csv 第 %d 条 code' % i)
+            self.assertEqual(restored_level, expected_level, 'csv 第 %d 条 level' % i)
+            self.assertEqual(restored_dim, expected_dim, 'csv 第 %d 条 dim' % i)
             self.assertEqual(gc.from_binary128(r['binary128'], dim=r['dim']), code)
 
 
