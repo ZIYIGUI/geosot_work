@@ -20,6 +20,8 @@ HTTP 层使用 FastAPI，测试既覆盖与 iwhere 黄金响应的逐字段比�
 - [九、复现说明](#九复现说明)
 - [十、无人机轨迹冲突检测与 PSI 计算](#十无人机轨迹冲突检测与-psi-计算)
 - [十一、空域网格计算（无人机低空导航）](#十一空域网格计算无人机低空导航)
+- [十二、空域可用性计算（城市低空监管）](#十二空域可用性计算城市低空监管)
+- [十三、CPSI 交集基数计算](#十三cpsi-交集基数计算)
 
 ---
 
@@ -53,7 +55,12 @@ geosot_work/
 │   ├── trajectory_party2.bin    # PSI 输入: 轨迹2编码
 │   ├── psi_result_party1.bin    # PSI 输出: 交集结果 (二进制)
 │   ├── psi_out.bin              # PSI 单独执行的输出
-│   └── airspace_grids.bin       # 空域网格编码 (3D 码, 约100万个)
+│   ├── airspace_grids.bin       # 空域网格编码 (3D 码, 约100万个)
+│   └── airspace_availability/   # 空域可用性计算产物
+│       ├── available_grids_Y.bin    # 可用网格集合 Y (150646 × 16)
+│       ├── query_airspace_X.bin     # 查询空域网格 X (7920 × 16)
+│       ├── plaintext_intersection.bin # 明文交集 (5940 × 16)
+│       └── psi_intersection.bin     # PSI 交集 (5940 × 16)
 │
 ├── tests/               # 测试套件 (unittest) + 可独立执行的脚本
 │   ├── test_gbt40087.py         # GB/T 40087 附录 D/A/B 标准符合性测试
@@ -63,6 +70,8 @@ geosot_work/
 │   ├── test_trajectory_conflict.py  # 无人机轨迹冲突检测 (编码 + 集合交集)
 │   ├── test_psi_trajectory.py   # 无人机轨迹 PSI 计算 (调用 psi/frontend.exe)
 │   ├── test_airspace_grids.py   # 空域网格计算 (德清县区域, 约100万网格)
+│   ├── test_airspace_availability.py  # 空域可用性计算 (城市低空监管, PSI 对比)
+│   ├── test_cpsi_cardinality.py       # CPSI 交集基数计算 (仅返回交集大小)
 │   ├── gen_large_trajectories.py    # 生成大规模轨迹数据 (10000 航点)
 │   ├── encode_data.py           # 数据编码脚本: data/ -> 网格编码提取 -> out/
 │   └── coords_to_json.py        # 坐标 -> 与 HTTP 返回格式一致的 JSON
@@ -178,11 +187,11 @@ python tests\coords_to_json.py --lat 39.9102778 --lng 116.3152778 --height 500 -
 ```
 （4 个 SKIP: geojson/multi_line/multi_polygon/multi_point，YAML 无黄金示例。）
 
-### 5.2 非 HTTP 测试套件（82 用例全过）
+### 5.2 非 HTTP 测试套件（103 用例全过）
 
 ```
 $ python -m unittest discover -s tests -v
-Ran 82 tests in 0.092s
+Ran 103 tests in 10.1s
 OK
 ```
 关键断言示例:
@@ -346,7 +355,7 @@ bytes16_hex
 
 ### 6.4 验证
 
-`tests/test_data_encode.py`（16 个用例，随套件共 82 个全部通过）断言:
+`tests/test_data_encode.py`（16 个用例，随套件共 103 个全部通过）断言:
 - data/ 四文件解析数量与类型符合预期（2 条轨迹 / 10 航点 / 10 个 3D 航点 / 2 个封闭区，多边形闭合）;
 - 提取编码结构完整（`-21` 层级、128 位串、16 字节 hex、dim∈{2,3}）;
 - 3D 记录 10 条、96 位码、`binary128` 前 32 位为 0（右对齐）;
@@ -611,3 +620,279 @@ python -m unittest tests.test_airspace_grids -v
 > **提示**：可通过调整 `level` 参数控制网格分辨率。Level 19 约 11m 精度，
 > Level 20 约 5.5m 精度，Level 21 约 2.7m 精度。层级越高，网格数量越多，
 > 计算时间越长。
+
+## 十二、空域可用性计算（城市低空监管）
+
+### 12.1 功能概述
+
+`tests/test_airspace_availability.py` 实现城市低空空域可用性计算，演示完整的空域查询流程：
+
+1. **城市网格化**：将城市区域划分为高精度 3D 网格（Level 21, ~31m × 27m × 31m）
+2. **占用标记**：标记建筑物、禁飞区、通信塔等占用的网格
+3. **可用网格集合 Y**：从全部网格中排除占用网格，得到可用网格
+4. **查询空域 X**：定义一个查询空域，计算其包含的网格
+5. **交集计算**：
+   - 明文计算 X ∩ Y（空域内可用网格）
+   - PSI 计算 X ∩ Y（隐私集合交集）
+6. **结果对比**：验证 PSI 结果与明文结果一致
+
+**核心思路**：使用**集合差运算**标记占用 —— 可用网格 = 全部网格 - 占用网格。
+查询空域与可用网格取交集，即为空域内的可用网格。
+
+### 12.2 场景参数
+
+**网格参数**：
+
+| 参数 | 值 |
+|------|-----|
+| 网格层级 | Level 21（1″ 网格） |
+| 网格尺寸 | ~31m (N-S) × 27m (E-W) × 31m (高度) |
+| 编码维度 | 3D（经纬度 + 高度） |
+
+**区域定义**（德清县附近）：
+
+| 区域 | 经度范围 | 纬度范围 | 高度范围 | 网格数 |
+|------|----------|----------|----------|--------|
+| 城市总区域 | 120.000°~120.028° | 30.540°~30.567° | 0~500m | 158,368 |
+| 占用区1（建筑群） | 120.020°~120.025° | 30.558°~30.562° | 0~100m | 810 |
+| 占用区2（禁飞区） | 120.008°~120.014° | 30.545°~30.550° | 0~500m | 6,336 |
+| 占用区3（通信塔） | 120.003°~120.005° | 30.560°~30.562° | 0~300m | 576 |
+| 查询空域 | 120.006°~120.018° | 30.544°~30.554° | 50~200m | 7,920 |
+
+### 12.3 运行方式
+
+```powershell
+# 独立运行（完整流程演示）
+python tests/test_airspace_availability.py
+
+# 运行 unittest
+python tests/test_airspace_availability.py --test
+# 或
+python -m unittest tests.test_airspace_availability -v
+```
+
+### 12.4 计算结果
+
+```
+======================================================================
+城市低空空域可用性计算演示
+======================================================================
+
+网格层级: Level 21 (1" 网格, ~31m × 27m × 31m)
+城市区域: (120.0, 30.54) - (120.028, 30.567)
+高度范围: 0m - 500m
+
+[1] 生成城市全部网格...
+    城市总网格: 158,368 (耗时 0.91s)
+
+[2] 标记占用区域...
+    建筑群:   810 个网格 (100m 以下)
+    禁飞区:   6,336 个网格 (全高度)
+    通信塔:   576 个网格 (300m 以下)
+    占用合计: 7,722 个网格
+
+[3] 可用网格集合 Y: 150,646
+
+[4] 查询空域 (120.006-120.018, 30.544-30.554, 50-200m)...
+    查询空域网格 X: 7,920
+
+[5] 明文交集计算 (X ∩ Y)...
+    |X| = 7,920
+    |Y| = 150,646
+    |X ∩ Y| = 5,940 (可用网格)
+    X 中被占用: 1,980 (25.0%)
+    耗时: 0.001300s
+
+[6] PSI 隐私集合交集...
+    PSI 交集大小: 5,940
+    PSI 耗时: 0.572s
+
+======================================================================
+结果对比:
+  明文交集: 5,940 个可用网格
+  PSI 交集: 5,940 个可用网格
+  一致性:   PASS [OK]
+======================================================================
+```
+
+### 12.5 输出产物
+
+所有输出文件保存在 `out/airspace_availability/` 目录：
+
+| 文件 | 大小 | 说明 |
+|------|------|------|
+| `available_grids_Y.bin` | 2,410,336 字节 | 可用网格集合 Y（150,646 × 16） |
+| `query_airspace_X.bin` | 126,720 字节 | 查询空域网格 X（7,920 × 16） |
+| `plaintext_intersection.bin` | 95,040 字节 | 明文交集结果（5,940 × 16） |
+| `psi_intersection.bin` | 95,040 字节 | PSI 交集结果（5,940 × 16） |
+
+二进制文件格式：每条编码 16 字节（128 位）自描述格式，包含 geo_num + level + dim。
+
+### 12.6 测试套件
+
+`tests/test_airspace_availability.py` 包含 4 个测试用例：
+
+| 测试用例 | 测试内容 |
+|----------|----------|
+| `test_data_generation` | 数据生成正确性：城市网格 > 1万，占用网格 > 100，可用 + 占用 = 全部 |
+| `test_query_airspace` | 查询空域包含占用网格和可用网格 |
+| `test_plaintext_intersection` | 明文交集计算正确，文件往返验证一致 |
+| `test_psi_intersection` | PSI 交集结果与明文结果完全一致 |
+
+### 12.7 核心代码
+
+**生成矩形区域 3D 网格**：
+
+```python
+def generate_rect_grids(lng_min, lat_min, lng_max, lat_max, h_min, h_max, level):
+    """生成矩形区域内的所有 3D 网格编码。"""
+    cd = gc.cell_deg(level)      # 网格经纬度跨度
+    hc = gc.height_cell(level)   # 高度单元格大小
+
+    codes = set()
+    lat = lat_min
+    while lat < lat_max:
+        lng = lng_min
+        while lng < lng_max:
+            h = h_min
+            while h < h_max:
+                code = gc.geo_num3d(lat, lng, h, level)
+                codes.add(code)
+                h += hc
+            lng += cd
+        lat += cd
+    return codes
+```
+
+**占用标记与可用网格计算**：
+
+```python
+# 生成城市全部网格
+all_grids = generate_rect_grids(CITY_LNG_MIN, CITY_LAT_MIN, ...)
+
+# 生成占用区域网格（建筑群 + 禁飞区 + 通信塔）
+occ1 = generate_rect_grids(OCC1_LNG_MIN, OCC1_LAT_MIN, ...)
+occ2 = generate_rect_grids(OCC2_LNG_MIN, OCC2_LAT_MIN, ...)
+occ3 = generate_rect_grids(OCC3_LNG_MIN, OCC3_LAT_MIN, ...)
+occupied = (occ1 | occ2 | occ3) & all_grids  # 合并占用，限制在城市范围内
+
+# 可用网格 = 全部 - 占用
+available = all_grids - occupied  # 集合 Y
+
+# 查询空域
+query = generate_rect_grids(QUERY_LNG_MIN, QUERY_LAT_MIN, ...)  # 集合 X
+
+# 明文交集
+plaintext = query & available  # X ∩ Y
+```
+
+**PSI 计算**：
+
+```python
+# Receiver (X 方) - 获得交集结果
+cmd_receiver = [PSI_EXE, '-in', x_path, '-r', '1', '-server', '1',
+                '-out', psi_out, '-noSort',
+                '-receiverSize', str(x_size), '-senderSize', str(y_size), '-nt', '8']
+
+# Sender (Y 方) - 不获得结果
+cmd_sender = [PSI_EXE, '-in', y_path, '-r', '0', '-server', '0',
+              '-noSort', '-receiverSize', str(x_size), '-senderSize', str(y_size), '-nt', '8']
+```
+
+### 12.8 应用场景
+
+该功能适用于以下城市低空监管场景：
+
+- **无人机航线规划**：查询空域内可用网格，避开建筑物和禁飞区
+- **实时空域查询**：快速判断指定区域是否可供无人机飞行
+- **隐私保护查询**：使用 PSI 协议，查询方无需暴露完整可用网格数据
+- **动态空域管理**：实时更新占用网格（新增建筑物、临时禁飞区），动态计算可用空域
+- **多运营商协调**：不同运营商持有各自的占用数据，通过 PSI 计算公共可用区域
+
+> **提示**：查询空域覆盖了部分占用区域（禁飞区），因此交集结果中 25% 的网格被占用，
+> 75% 的网格可用。实际应用中，占用比例取决于城市建筑密度和禁飞区分布。
+
+## 十三、CPSI 交集基数计算
+
+### 13.1 功能概述
+
+`tests/test_cpsi_cardinality.py` 实现 CPSI (Circuit PSI) 交集基数计算。与普通 PSI 不同，
+CPSI 仅返回交集的**基数**（交集大小），不返回具体的交集元素，结果直接输出在终端而不存储到文件。
+
+**与普通 PSI 的区别：**
+
+| 特性 | 普通 PSI | CPSI |
+|------|----------|------|
+| 输出内容 | 完整交集元素集合 | 仅交集基数（数量） |
+| 输出方式 | 写入二进制文件 | 终端打印 |
+| 隐私保护 | 强（不泄露交集大小） | 较弱（泄露交集大小） |
+| 适用场景 | 需要知道具体交集元素 | 仅需知道交集规模 |
+
+### 13.2 运行方式
+
+```powershell
+# 独立运行（完整流程演示）
+python tests/test_cpsi_cardinality.py
+
+# 运行 unittest
+python -m unittest tests.test_cpsi_cardinality -v
+```
+
+### 13.3 计算结果
+
+```
+[4] CPSI 交集基数计算...
+    (仅返回交集大小，不返回具体元素)
+    CPSI 耗时: 2.285s
+
+  === Receiver 输出 ===
+    reading set... 3ms
+    connecting as server at address localhost:1212 8ms
+    Validating set sizes... 0ms
+    running circuit PSI (cardinality)... 1247ms
+    cardinality = 5940
+    receiverSize = 7920
+
+======================================================================
+结果对比:
+  明文交集基数: 5,940
+  CPSI 交集基数: 5,940
+  一致性: PASS [OK]
+======================================================================
+```
+
+### 13.4 CPSI 命令格式
+
+CPSI 使用 `frontend.exe` 的 `-card` 标志：
+
+```powershell
+# 终端 A (Receiver = Server)
+./psi/frontend.exe -in query_airspace_X.bin -r 1 -server 1 -card -v
+
+# 终端 B (Sender = Client)
+./psi/frontend.exe -in available_grids_Y.bin -r 0 -server 0 -card
+```
+
+**关键参数：**
+- `-card`: 启用 Circuit PSI cardinality 模式，仅返回交集基数
+- `-v`: verbose 输出，显示详细计算过程
+- `-r 1`: 此方为 Receiver（获得结果）
+- `-server 1`: 此方作为 IP 服务器（监听连接）
+
+**输出格式：**
+```
+cardinality = 5940
+receiverSize = 7920
+```
+
+### 13.5 应用场景
+
+CPSI 适用于以下场景：
+
+- **空域容量评估**：仅需知道查询空域内有多少可用网格，无需知道具体位置
+- **隐私保护统计**：统计双方数据的重叠规模，不暴露具体重叠元素
+- **资源预分配**：根据交集规模预估所需资源，无需详细交集信息
+- **快速筛选**：先通过 CPSI 评估交集规模，再决定是否执行完整 PSI
+
+> **注意**：CPSI 会泄露交集的基数信息，在隐私要求极高的场景中应谨慎使用。
+> 如需完整隐私保护（不泄露交集大小），请使用普通 PSI 协议。
