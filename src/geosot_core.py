@@ -695,6 +695,54 @@ def grid_volume(code, level=None, dim=2):
 
     return area * hc
 
+
+def airspace_available_volume(cardinality, level, lat=0):
+    """根据 CPSI 交集基数计算空域可用体积。
+
+    计算逻辑: 可用体积 = 交集基数 × 单个网格体积
+
+    参数:
+        cardinality: 交集基数 (可用网格数量, 如 CPSI 返回)
+        level: 网格层级
+        lat: 参考纬度 (度), 用于计算精确网格面积。
+             默认为 0 (赤道近似), 传入实际纬度可获得精确体积。
+
+    返回:
+        dict: {
+            'cardinality': 交集基数,
+            'level': 层级,
+            'lat': 参考纬度,
+            'single_grid_volume': 单个网格体积 (立方米),
+            'total_volume': 总可用体积 (立方米),
+            'total_volume_km3': 总可用体积 (立方公里)
+        }
+    """
+    cd = cell_deg(level)
+    hc = height_cell(level)
+
+    # 计算网格面积
+    if lat == 0:
+        # 赤道近似
+        area = (cd * THETA0 * R0) ** 2
+    else:
+        # 精确面积
+        lat1 = math.radians(lat)
+        lat2 = math.radians(lat + cd)
+        area = (math.pi / 180) * cd * R_SPHERE ** 2 * abs(math.sin(lat2) - math.sin(lat1))
+
+    single_vol = area * hc
+    total_vol = cardinality * single_vol
+
+    return {
+        'cardinality': cardinality,
+        'level': level,
+        'lat': lat,
+        'single_grid_volume': single_vol,
+        'total_volume': total_vol,
+        'total_volume_km3': total_vol / 1e9
+    }
+
+
 def grid_dimensions(code, level=None, dim=2):
     """获取网格的三维尺寸信息。
 

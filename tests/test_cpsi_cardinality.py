@@ -281,6 +281,22 @@ class TestCPSICardinality(unittest.TestCase):
             print(f"  一致性验证: {'PASS [OK]' if match else 'FAIL [X]'}")
             self.assertEqual(cardinality, self.plaintext_cardinality,
                            "CPSI 交集基数应与明文交集大小一致")
+
+            # 计算空域可用体积
+            ref_lat = (QUERY_LAT_MIN + QUERY_LAT_MAX) / 2
+            vol_info = gc.airspace_available_volume(cardinality, LEVEL, lat=ref_lat)
+            print(f"\n  === 空域可用体积 ===")
+            print(f"  单个网格体积: {vol_info['single_grid_volume']:,.2f} m^3")
+            print(f"  可用网格基数: {vol_info['cardinality']:,}")
+            print(f"  空域可用体积: {vol_info['total_volume']:,.2f} m^3")
+            print(f"  空域可用体积: {vol_info['total_volume_km3']:.6f} km^3")
+
+            # 验证体积计算
+            self.assertGreater(vol_info['single_grid_volume'], 0, "单个网格体积应大于 0")
+            self.assertAlmostEqual(vol_info['total_volume'],
+                                   cardinality * vol_info['single_grid_volume'],
+                                   places=2,
+                                   msg="总体积应等于基数乘以单格体积")
         else:
             print(f"  [警告] 无法从输出中解析交集基数")
             print(f"  请检查 frontend.exe 的 CPSI 输出格式")
@@ -393,6 +409,15 @@ def main():
         print(f"  CPSI 交集基数: {cardinality:,}")
         match = cardinality == plaintext_card
         print(f"  一致性: {'PASS [OK]' if match else 'FAIL [X]'}")
+
+        # 计算空域可用体积
+        ref_lat = (QUERY_LAT_MIN + QUERY_LAT_MAX) / 2  # 查询空域中心纬度
+        vol_info = gc.airspace_available_volume(cardinality, LEVEL, lat=ref_lat)
+        print(f"\n  === 空域可用体积 ===")
+        print(f"  单个网格体积: {vol_info['single_grid_volume']:,.2f} m^3")
+        print(f"  可用网格基数: {vol_info['cardinality']:,}")
+        print(f"  空域可用体积: {vol_info['total_volume']:,.2f} m^3")
+        print(f"  空域可用体积: {vol_info['total_volume_km3']:.6f} km^3")
     else:
         print(f"  [提示] 无法从输出中解析交集基数")
         print(f"  请检查 frontend.exe 的 CPSI 输出格式")
