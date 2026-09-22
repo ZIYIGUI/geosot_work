@@ -22,6 +22,7 @@ HTTP 层使用 FastAPI，测试既覆盖与 iwhere 黄金响应的逐字段比�
 - [十一、空域网格计算（无人机低空导航）](#十一空域网格计算无人机低空导航)
 - [十二、空域可用性计算（城市低空监管）](#十二空域可用性计算城市低空监管)
 - [十三、CPSI 交集基数计算](#十三cpsi-交集基数计算)
+- [十四、无人机起降场选址算法（基于网格）](#十四无人机起降场选址算法基于网格)
 
 ---
 
@@ -896,3 +897,198 @@ CPSI 适用于以下场景：
 
 > **注意**：CPSI 会泄露交集的基数信息，在隐私要求极高的场景中应谨慎使用。
 > 如需完整隐私保护（不泄露交集大小），请使用普通 PSI 协议。
+
+## 十四、无人机起降场选址算法（基于网格）
+
+### 14.1 功能概述
+
+`src/uav_siting.py` 实现基于网格的无人机起降场选址算法，完整复现论文中描述的六步流程：
+
+1. **构建时空网格**：在目标区域内生成 3D + 时间维度的网格集合
+2. **硬约束过滤**：通过 8 位掩码（b0-b5）一票否决不合格网格（禁飞区、障碍物、恶劣气象等）
+3. **软约束风险评分**：对幸存网格按多因子加权计算综合风险评分 R ∈ [0, 1]
+4. **风险阈值过滤**：仅保留 R < R_threshold 的低风险网格
+5. **DBSCAN 聚类 + 风险加权质心**：将低风险网格聚类，计算每个聚类的风险加权质心作为候选点
+6. **时间窗口可用性检查**：验证候选点在指定时间窗口内的可用性比例 A ≥ A_threshold
+
+**算法公式对照：**
+
+| 步骤 | 公式 | 代码函数 |
+|------|------|----------|
+| 硬约束 | `mask & 0x3F == 0` | `hard_constraint_filter()` |
+| 风险评分 | `R = Σ w_i × f_i(scene)` | `compute_risk_scores()` |
+| 风险过滤 | `R < R_threshold` | `filter_by_risk_threshold()` |
+| 聚类质心 | `C_k = Σ (1-R_g)·P_g / Σ (1-R_g)` | `cluster_and_centroids()` |
+| 时间可用性 | `A = |T_avail| / |T_total|` | `time_window_availability()` |
+
+### 14.2 8 位网格掩码
+
+每个网格使用 8 位掩码标记状态，b0-b5 参与硬约束（一票否决），b6-b7 为软标签：
+
+```
+Bit  名称              说明                         硬约束
+b0   NO_FLY            禁飞区                       ✓
+b1   OBSTACLE          障碍物 (建筑/塔/线)          ✓
+b2   WEATHER           恶劣气象                     ✓
+b3   ELECTROMAGNETIC   强电磁干扰                   ✓
+b4   ATC_CONTROL       临时空管限制                 ✓
+b5   RESERVED          预留                         ✓
+b6   SCENE_LABEL       场景标签 (郊区0/城市1)       ✗
+b7   COMM_DEGRADED     通信质量降级                 ✗
+```
+
+### 14.3 运行方式
+
+```powershell
+# 独立运行（完整流程演示）
+python tests/test_uav_siting.py
+
+# 运行 unittest
+python tests/test_uav_siting.py --test
+# 或
+python -m unittest tests.test_uav_siting -v
+```
+
+### 14.4 计算结果
+
+测试区域为德清县附近约 500m × 500m 的小区域，Level 19（~11m 精度），高度 0-100m，10 个时间步：
+
+```
+======================================================================
+无人机起降场选址算法演示
+======================================================================
+
+区域: 德清县附近 (~500m × 500m)
+网格层级: Level 19 (~11m)
+高度范围: 0m - 100m
+时间步: 0 - 10
+
+[1/6] 构建时空网格...
+    时空网格总数: 160
+[2/6] 硬约束过滤...
+    硬约束幸存数: 121
+    淘汰率: 24.4%
+[3/6] 软约束风险评分...
+    平均风险评分: 0.459
+[4/6] 风险阈值过滤 (R < 0.6)...
+    低风险候选数: 121
+[5/6] DBSCAN 聚类 (eps=50.0m, min_samples=2)...
+    聚类数: 1
+[6/6] 时间窗口可用性检查 (A >= 0.3)...
+    通过的候选起降场: 1
+
+======================================================================
+选址结果汇总
+======================================================================
+总时空网格数: 160
+硬约束过滤后: 121 (75.6%)
+风险阈值过滤后: 121
+聚类数: 1
+最终候选起降场: 1
+
+候选起降场列表:
+  [1] 坐标: (120.102188, 30.552033, 61.3m)
+      聚类网格数: 121, 平均风险: 0.460
+      时间可用性: 1.00
+======================================================================
+```
+
+### 14.5 测试套件
+
+`tests/test_uav_siting.py` 包含 11 个测试用例，覆盖算法各组件：
+
+| 测试类 | 用例数 | 测试内容 |
+|--------|--------|----------|
+| `TestGridMask` | 3 | 8 位掩码硬约束检查、掩码描述 |
+| `TestSpatiotemporalGrids` | 2 | 时空网格构建、带掩码网格构建 |
+| `TestHardConstraintFilter` | 1 | 硬约束过滤正确性 |
+| `TestRiskScoring` | 2 | 风险评分计算、权重校验 |
+| `TestClustering` | 1 | DBSCAN 聚类与质心计算 |
+| `TestTimeWindowAvailability` | 1 | 时间窗口可用性检查 |
+| `TestUAVSiting` | 1 | 端到端完整流程 |
+
+### 14.6 API 接口
+
+```python
+from uav_siting import uav_siting, GridMask
+
+# 完整选址流程
+result = uav_siting(
+    lower_polygon, upper_polygon,   # 空域上下边界多边形
+    h_min, h_max, level,            # 高度范围与网格层级
+    time_start, time_end, dt,       # 时间范围与步长
+    risk_factors, weights,          # 风险因子数据与权重
+    R_threshold=0.6,                # 风险阈值
+    eps=50.0, min_samples=3,        # DBSCAN 参数
+    A_threshold=0.7,                # 时间可用性阈值
+    buffer_grids=3,                 # 缓冲区网格数
+    mask_provider=None,             # 掩码提供函数 (可选)
+    scene='urban'                   # 场景类型
+)
+
+# 返回结构
+result = {
+    'total_grids': 160,            # 总时空网格数
+    'surviving_grids': 121,        # 硬约束幸存数
+    'risk_filtered_grids': 121,    # 风险阈值过滤后数
+    'num_clusters': 1,             # 聚类数
+    'candidates': [{               # 候选起降场列表
+        'lng': 120.102, 'lat': 30.552, 'h': 61.3,
+        'cluster_id': 0, 'grid_count': 121,
+        'avg_risk': 0.460, 'availability': 1.0
+    }]
+}
+```
+
+**风险因子数据结构：**
+
+```python
+risk_factors = {
+    'land_use': {code: 0.3, ...},        # 土地利用适宜度
+    'population': {code: 0.5, ...},      # 人口密度
+    'power_facility': {code: 0.1, ...},  # 电力设施接近性
+    'construction_cost': {code: 0.4, ...}, # 建设成本
+    'noise': {code: 0.2, ...}            # 噪声社会适宜性
+}
+
+weights = {
+    'land_use': 0.3,
+    'population': 0.25,
+    'power_facility': 0.15,
+    'construction_cost': 0.2,
+    'noise': 0.1
+}
+# 权重和必须为 1.0
+```
+
+### 14.7 应用场景
+
+- **城市低空物流**：为无人机配送系统选址起降场/充电站
+- **应急救援**：快速评估灾后临时起降点可用性
+- **城市空中交通 (UAM)**：eVTOL 垂直起降场选址规划
+- **农业植保**：无人机作业基站选址
+- **巡检运维**：电力/管道巡检无人机自动换电站选址
+
+### 14.8 空域体积计算
+
+结合 CPSI 交集基数，可计算空域可用体积：
+
+```python
+import geosot_core as gc
+
+# CPSI 返回交集基数
+cardinality = 5940
+
+# 计算体积
+vol = gc.airspace_available_volume(cardinality, level=19, lat=30.55)
+print(f"总体积: {vol['total_volume_m3']:,.2f} m³")
+print(f"约 {vol['total_volume_km3']:.6f} km³")
+```
+
+输出：
+```
+单个网格体积: 25,243.25 m³
+交集基数: 5,940
+总体积: 149,944,912.53 m³
+约 0.149945 km³
+```

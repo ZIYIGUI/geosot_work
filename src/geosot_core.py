@@ -1407,11 +1407,16 @@ def airspace_grids(lower_polygon, upper_polygon, h_min, h_max, level):
 
     # Step 3: 生成 3D 网格编码
     # 对每个高度层，为交集中的每个网格生成 3D 编码
+    # 需要将 row/col 转换回经纬度坐标
+    c = cells_per_deg(level)
+    cd = cell_deg(level)
     codes = []
     for h_idx in range(h_min_idx, h_max_idx + 1):
-        for r, c in sorted(common_cells):
-            la = r << (32 - level)
-            ln = c << (32 - level)
-            codes.append(interleave3(la, ln, h_idx, order=(2, 0, 1), nbits=32))
+        for r, col in sorted(common_cells):
+            # 将网格索引转换回经纬度 (网格中心点)
+            lat = (r + 0.5) / c  # 行索引 -> 纬度
+            lng = (col + 0.5) / c  # 列索引 -> 经度
+            h = h_idx * hc + hc / 2  # 高度层中心
+            codes.append(geo_num3d(lat, lng, h, level))
 
     return codes
