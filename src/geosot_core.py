@@ -911,8 +911,8 @@ def height_cell(level):
 def height_index(height, level):
     """大地高(米) -> 高度层级索引 n: log_{1+θ}(1+H/R0)/cd, GB 公式(B.7)。
     """
-    if height < 0:
-        return 0
+    if not math.isfinite(height) or height < 0:
+        raise ValueError("legacy heightprofile supports only finite nonnegative height")
     cd = cell_deg(level)
     k = math.log(1 + height / R0) / math.log(1 + THETA0) / cd
     return max(0, int(math.floor(k)))
@@ -920,6 +920,10 @@ def height_index(height, level):
 def geo_num3d(lat, lng, height, level):
     """经纬高 -> 3D 网格码 (96 位): interleave3(lat_pack, lng_pack, h, order=(2,0,1))。
     """
+    if not isinstance(level, int) or not 1 <= level <= 32:
+        raise ValueError("level must be an integer in [1,32]")
+    if not (math.isfinite(lat) and math.isfinite(lng) and 0 <= lat < 88 and 0 <= lng < 180):
+        raise ValueError("legacy reconstruction only validates NE nonpolar coordinates (0<=lat<88, 0<=lng<180)")
     lp = _coord_to_pack(lat, level)
     np_ = _coord_to_pack(lng, level)
     h = height_index(height, level)
@@ -1122,6 +1126,16 @@ def sphere3d(lat, lng, height, radius, level):
 
 
 # ------------------------------ 128位 / 16字节 扩展 ------------------------------
+def _checked_code(code, dim):
+    """验证编码值是否适合指定的维度 (2D=64位, 3D=96位)。"""
+    if dim not in (2, 3):
+        raise ValueError('dim must be 2 or 3')
+    bits = 64 if dim == 2 else 96
+    if isinstance(code, bool) or not isinstance(code, int) or not 0 <= code < (1 << bits):
+        raise ValueError('code must fit the selected unsigned 64/96-bit domain')
+    return code
+
+
 def to_binary128(code, level=None, dim=2):
     """编码值 -> 128 位二进制字符串 (有效位左对齐, 右侧补 0)。
     dim=2: 2D 码(64 位); dim=3: 3D 码(96 位)。level 用于指示有效位宽。
@@ -1136,9 +1150,49 @@ def to_binary128(code, level=None, dim=2):
 def from_binary128(binstr, dim=2):
     """128 位二进制字符串 -> 编码值 (取末尾 64/96 位, 与大端左对齐存储对应)。dim=2 取 64 位, dim=3 取 96 位。"""
     s = str(binstr).strip().replace(' ', '')
-    if dim == 3:
-        return int(s[-96:], 2)
-    return int(s[-64:], 2)
+    if len(s) != 128 or any(ch not in '01' for ch in s):
+        raise ValueError('exactly 128 binary characters required')
+    # 验证填充位必须为 0
+    if dim == 2:
+        # 2D: 前 64 位必须是 0
+        if any(ch != '0' for ch in s[:64]):
+            raise ValueError('padding bits must be zero for 2D code')
+        return _checked_code(int(s[-64:], 2), dim)
+    else:
+        # 3D: 前 32 位必须是 0
+        if any(ch != '0' for ch in s[:32]):
+            raise ValueError('padding bits must be zero for 3D code')
+        return _checked_code(int(s[-96:], 2), dim)
+
+
+# ------------------------------ simple 序列化变体 (iWhere 兼容) ------------------------------
+def to_binary128_simple(code, dim=2):
+    """编码值 -> 128 位二进制字符串 (右对齐, 简单 big-endian 格式)。
+    与 iWhere 引擎兼容, 不包含元数据。"""
+    return format(_checked_code(code, dim), '0128b')
+
+
+def from_binary128_simple(binstr, dim=2):
+    """128 位二进制字符串 -> 编码值 (严格 128 字符验证)。
+    与 iWhere 引擎兼容, 不包含元数据。"""
+    value = str(binstr).strip().replace(' ', '')
+    if len(value) != 128 or any(ch not in '01' for ch in value):
+        raise ValueError('exactly 128 binary characters required')
+    return _checked_code(int(value, 2), dim)
+
+
+def to_bytes16_simple(code, dim=2):
+    """编码值 -> 16 字节 (简单 big-endian, 无元数据)。
+    与 iWhere 引擎兼容, 不包含 level 和 dim 信息。"""
+    return _checked_code(code, dim).to_bytes(16, 'big')
+
+
+def from_bytes16_simple(data, dim=2):
+    """16 字节 -> 编码值 (简单 big-endian, 无元数据)。
+    与 iWhere 引擎兼容, 返回编码值而非元组。"""
+    if len(data) != 16:
+        raise ValueError('exactly 16 bytes required')
+    return _checked_code(int.from_bytes(data, 'big'), dim)
 
 
 def to_bytes16(code, dim=2, level=None):
@@ -1159,6 +1213,9 @@ def to_bytes16(code, dim=2, level=None):
     返回:
         bytes: 16 字节
     """
+    # 验证编码值
+    code = _checked_code(code, dim)
+
     # 提取 geo_num 的各部分
     code_low = code & 0xFFFFFFFFFFFFFFFF  # 低 64 位
     code_high = (code >> 64) & 0xFFFFFFFF  # 高 32 位 (仅 3D 使用)
@@ -1219,6 +1276,9 @@ def from_bytes16(buf, _dim=None):
         code = (code_high << 64) | code_low
     else:
         code = code_low
+
+    # 验证编码值是否适合指定的维度
+    _checked_code(code, stored_dim)
 
     return code, level, stored_dim
 

@@ -1,0 +1,53 @@
+{
+  "description": "Project-defined offline v2 contract example, not native iWhere or a cryptographic request",
+  "profile": {
+    "scheme_namespace": "project:iwhere_legacy",
+    "scheme_version": "1",
+    "dimension": 3,
+    "crs": "EPSG:4326",
+    "height_profile": "legacy-height-v1"
+  },
+  "ingestion_context": {
+    "dataset_id": "weather-dataset-a",
+    "source_id": "weather_a",
+    "source_record_id": "WX-source-record-001",
+    "default_interval": {
+      "valid_from": "2026-09-24T10:00:00+08:00",
+      "valid_to": "2026-09-24T11:00:00+08:00"
+    }
+  },
+  "v1_cell": {
+    "grid": {"geo_num": "040493600000000000000000", "geo_level": 18},
+    "attributes": [
+      {
+        "attribute_id": "WX001",
+        "type": "continuous",
+        "name": "wind_speed",
+        "value": 7.2,
+        "unit": "m/s",
+        "source": "weather_a",
+        "confidence": 0.96
+      }
+    ]
+  },
+  "local_condition": {
+    "attribute_name": "wind_speed",
+    "operator": "GT",
+    "threshold": 8.0,
+    "query_time": "2026-09-24T02:30:00Z"
+  },
+  "matching_context": {
+    "match_domain": "demo-task-common-grid-v1",
+    "time_bin_profile": {
+      "profile_id": "utc-minute-v1",
+      "origin": "1970-01-01T00:00:00Z",
+      "duration_seconds": 60
+    },
+    "at": "2026-09-24T02:30:00Z"
+  },
+  "secure_operator_description": {
+    "operator": "secure_compare",
+    "input_handles": ["opaque:risk-input-a", "opaque:threshold-input"],
+    "output_policy_id": "decision-only-v1"
+  }
+}

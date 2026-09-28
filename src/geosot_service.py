@@ -543,7 +543,7 @@ def outer_rectangle_geo_num_list(codes_levels):
     return out, [level] * len(out)
 
 
-def path_geo_num(begin_code, begin_level, end_code, end_level, obstacles, level):
+def path_geo_num(begin_code, begin_level, end_code, end_level, obstacles, level, max_nodes=100000):
     """路径查询: 直线 DDA 采样, 遇障碍 BFS 绕行 (统一映射到目标层级)。
     """
     from collections import deque
@@ -563,6 +563,10 @@ def path_geo_num(begin_code, begin_level, end_code, end_level, obstacles, level)
             mr >>= (ol - level)
             mc >>= (ol - level)
         obs.add((mr, mc))
+    if (r0, c0) in obs or (r1, c1) in obs:
+        return []
+    if (r0, c0) == (r1, c1):
+        return [_routeB_code(r0, c0, level)]
     # 直线采样
     steps = max(abs(r1 - r0), abs(c1 - c0))
     straight = []
@@ -584,10 +588,16 @@ def path_geo_num(begin_code, begin_level, end_code, end_level, obstacles, level)
                 if dr == 0 and dc == 0:
                     continue
                 nr, nc = r + dr, cc + dc
+                if not (0 <= nr < (1 << level) and 0 <= nc < (1 << level)):
+                    continue
+                if len(prev) >= max_nodes:
+                    raise RuntimeError("path search resource limit reached; no route certified")
                 if (nr, nc) in obs or (nr, nc) in prev:
                     continue
                 prev[(nr, nc)] = (r, cc)
                 q.append((nr, nc))
+    if (r1, c1) not in prev:
+        return []
     path = []
     cur = (r1, c1)
     while cur is not None:
@@ -940,31 +950,36 @@ def aggregation_relationship(list_a, list_b):
     return 0
 
 
-def visual_analysis(begin_code, begin_level, end_code, end_level, obstacles, level):
-    """可视域分析: 起点->终点连线采样, 穿过障碍网格(高度0层近似)则不可视。
+def _segment_intersects_box(start, end, box):
+    """Closed 3D segment/AABB intersection; touching is conservatively blocked.
+
+    Coordinates are (lng, lat, height), not Cartesian metric distances. This
+    tests a straight segment in the stated coordinate chart, not earth curvature.
     """
-    b_lat, b_lng = gc.center_point(begin_code, begin_level)[::-1] if False else None
-    p1 = gc.center_point(begin_code, begin_level)
-    p2 = gc.center_point(end_code, end_level)
-    c = gc.cells_per_deg(level)
-    obs = set()
-    for oc, ol in obstacles:
-        h, la, ln = gc.decode_geo_num3d(oc, ol)
-        (d, m, s, sub), (d2, m2, s2, sub2) = gc.unpack_dms(la), gc.unpack_dms(ln)
-        lb_lat = gc.dms2deg(d, m, s, sub, ol)
-        lb_lng = gc.dms2deg(d2, m2, s2, sub2, ol)
-        r = int(math.floor(lb_lat * c + 1e-9))
-        cc = int(math.floor(lb_lng * c + 1e-9))
-        obs.add((r, cc, h))
-    steps = max(8, int(abs(p2[1] - p1[1]) * c + abs(p2[0] - p1[0]) * c) * 4)
-    for i in range(steps + 1):
-        t = i / steps
-        la = p1[1] + (p2[1] - p1[1]) * t
-        lo = p1[0] + (p2[0] - p1[0]) * t
-        hgt = gc.center_point3d(begin_code, begin_level)[2] if False else 0
-        r = int(math.floor(la * c + 1e-9))
-        cc = int(math.floor(lo * c + 1e-9))
-        # 高度: 用 0 层近似
-        if (r, cc, 0) in obs:
-            return 1
-    return 0
+    lower = (box[1], box[0], box[4])
+    upper = (box[3], box[2], box[5])
+    t0, t1 = 0.0, 1.0
+    for p, q, lo, hi in zip(start, end, lower, upper):
+        delta = q - p
+        if abs(delta) < 1e-15:
+            if p < lo or p > hi:
+                return False
+            continue
+        a, b = sorted(((lo - p) / delta, (hi - p) / delta))
+        t0, t1 = max(t0, a), min(t1, b)
+        if t0 > t1:
+            return False
+    return True
+
+
+def visual_analysis(begin_code, begin_level, end_code, end_level, obstacles, level):
+    """Local 3D line-of-sight semantics: 1 visible, 0 blocked.
+
+    Uses legacy decoded boxes and their full height interval. This fixes the
+    unconditional None-unpacking crash; vendor output semantics have no golden
+    example and are NOT claimed as validated. No terrain/refraction modelling.
+    """
+    start = gc.center_point3d(begin_code, begin_level)
+    end = gc.center_point3d(end_code, end_level)
+    return int(not any(_segment_intersects_box(start, end, _boxes(c, lv))
+                       for c, lv in obstacles))

@@ -1,0 +1,2032 @@
+[
+ {
+  "path": "/geosot/decimal2quaternary",
+  "summary": "2D网格编码的进制转换(十进制转换为四进制)",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "网格编码",
+    "example": "412869894958481408-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "网格层级",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/quaternary2decimal",
+  "summary": "2D网格编码的进制转换(四进制转换为十进制)",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "G00112322303233231203131"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/decimal2binary",
+  "summary": "2D网格编码的进制转换(十进制转换为二进制)",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/binary2decimal",
+  "summary": "2D网格编码的进制转换(二进制转换为十进制)",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "0000010110111010110011101111101101100011011101"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/bit_extract_geo_num",
+  "summary": "按位提取2D网格编码(十进制)",
+  "required": [
+   "base",
+   "begin_index",
+   "end_index",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412869894958481408"
+   },
+   "begin_index": {
+    "type": "integer",
+    "desc": "起始位(包括),从 0 开始， 从右向左提取",
+    "example": 0
+   },
+   "end_index": {
+    "type": "integer",
+    "desc": "终止位(包括)",
+    "example": 5
+   },
+   "base": {
+    "type": "integer",
+    "desc": "支持的进制(2:二进制,4: 四进制,10:十进制)",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot/geography_mean_geo_num",
+  "summary": "2D网格编码地理含义真实性判断",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "",
+    "example": "23"
+   }
+  }
+ },
+ {
+  "path": "/geosot/center_point",
+  "summary": "2D网格中心经纬度",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/center_point2",
+  "summary": "经纬度对应2D网格的中心经纬度",
+  "required": [
+   "geo_level",
+   "lat",
+   "lng"
+  ],
+  "props": {
+   "lat": {
+    "type": "number",
+    "desc": "十进制网格编码",
+    "example": 31
+   },
+   "lng": {
+    "type": "number",
+    "desc": "",
+    "example": 105
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/location_point",
+  "summary": "2D网格的定位点经纬度",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "",
+    "example": "23"
+   }
+  }
+ },
+ {
+  "path": "/geosot/scope_geo_num",
+  "summary": "2D网格编码的经纬度范围",
+  "required": [
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "多个用英文逗号分隔",
+    "example": "412869894958743552,412869894958481408"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/move_geo_num",
+  "summary": "2D网格相对位移",
+  "required": [
+   "b",
+   "geo_level",
+   "geo_num",
+   "l"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   },
+   "b": {
+    "type": "integer",
+    "desc": "默认值为 0,东为正方向, 西为负方向",
+    "example": 0
+   },
+   "l": {
+    "type": "integer",
+    "desc": "默认值为 0,北为正方向, 南为负方向",
+    "example": 0
+   }
+  }
+ },
+ {
+  "path": "/geosot/lng_lat2row_col",
+  "summary": "经纬度转换为对应2D网格行列号",
+  "required": [
+   "geo_level",
+   "lat",
+   "lng"
+  ],
+  "props": {
+   "lat": {
+    "type": "number",
+    "desc": "",
+    "example": 31
+   },
+   "lng": {
+    "type": "number",
+    "desc": "",
+    "example": 131
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 24
+   }
+  }
+ },
+ {
+  "path": "/geosot/row_col2lng_lat",
+  "summary": "2D网格行列号转所在网格中心经纬度",
+  "required": [
+   "col",
+   "geo_level",
+   "row"
+  ],
+  "props": {
+   "row": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   },
+   "col": {
+    "type": "integer",
+    "desc": "",
+    "example": 2
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot/sort_layer_geo_num_list",
+  "summary": "2D网格编码排序(按层级)",
+  "required": [
+   "geo_level_list",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894958481408,414044620331155456"
+   },
+   "geo_level_list": {
+    "type": "string",
+    "desc": "",
+    "example": "23,19"
+   }
+  }
+ },
+ {
+  "path": "/geosot/sort_asc_geo_num_list",
+  "summary": "2D网格编码排序(按编码值)",
+  "required": [
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "414044620331155456,41404331155456"
+   }
+  }
+ },
+ {
+  "path": "/geosot/geo_num2row_col",
+  "summary": "2D网格码转换为所在行列序号",
+  "required": [
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/row_col2geo_num",
+  "summary": "2D网格行列序号转换为2D网格码",
+  "required": [
+   "col",
+   "geo_level",
+   "row"
+  ],
+  "props": {
+   "row": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   },
+   "col": {
+    "type": "integer",
+    "desc": "",
+    "example": 2
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 14
+   }
+  }
+ },
+ {
+  "path": "/geosot/geo_num2beidou_grid_code",
+  "summary": "2D网格码转北斗网格码",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894958481408"
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "",
+    "example": "23"
+   }
+  }
+ },
+ {
+  "path": "/geosot/beidou_grid_code2geo_num",
+  "summary": "北斗网格码转2D网格码",
+  "required": [
+   "beidou_grid_code",
+   "beidou_grid_level"
+  ],
+  "props": {
+   "beidou_grid_code": {
+    "type": "string",
+    "desc": "",
+    "example": "N48H67171CA372"
+   },
+   "beidou_grid_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 7
+   }
+  }
+ },
+ {
+  "path": "/geosot/show_geo_num",
+  "summary": "经纬矩形所在的2D网格的经线数组和纬线数组",
+  "required": [],
+  "props": {
+   "lat_left_top": {
+    "type": "number",
+    "desc": "大于 lat_right_bottom",
+    "example": 45
+   },
+   "lng_left_top": {
+    "type": "number",
+    "desc": "小于 lng_right_bottom",
+    "example": 131
+   },
+   "lat_right_bottom": {
+    "type": "number",
+    "desc": "",
+    "example": 31
+   },
+   "lng_right_bottom": {
+    "type": "number",
+    "desc": "",
+    "example": 140
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 9
+   }
+  }
+ },
+ {
+  "path": "/geosot/point",
+  "summary": "2D网格编码(点)",
+  "required": [
+   "geo_level",
+   "lat",
+   "lng"
+  ],
+  "props": {
+   "lat": {
+    "type": "number",
+    "desc": "",
+    "example": 31
+   },
+   "lng": {
+    "type": "number",
+    "desc": "",
+    "example": 131
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 5
+   }
+  }
+ },
+ {
+  "path": "/geosot/multi_point",
+  "summary": "2D网格编码(多点)",
+  "required": [],
+  "props": {
+   "lats": {
+    "type": "number",
+    "desc": ""
+   },
+   "lngs": {
+    "type": "number",
+    "desc": ""
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 5
+   }
+  }
+ },
+ {
+  "path": "/geosot/line",
+  "summary": "2D网格编码(线)",
+  "required": [
+   "geo_level",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": "",
+    "example": "31,34,32"
+   },
+   "lngs": {
+    "type": "string",
+    "desc": "",
+    "example": "131,134,128"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 8
+   }
+  }
+ },
+ {
+  "path": "/geosot/multi_line",
+  "summary": "2D网格编码(多线)",
+  "required": [
+   "coordinates",
+   "geo_level"
+  ],
+  "props": {
+   "coordinates": {
+    "type": null,
+    "desc": "",
+    "example": [
+     "[[[105.6005859375,30.65681556429287],[105.61166015624999,30.669441837922 88],[105.6298828125,30.671055426540206],[105.6378515625,30.6858952133724 44]],[[109.3798828125,30.031055426540206],[109.388515625,30.135895213372444]]]"
+    ]
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "",
+    "example": "10"
+   }
+  }
+ },
+ {
+  "path": "/geosot/rect",
+  "summary": "2D网格编码(矩形)",
+  "required": [
+   "geo_level",
+   "lat_left_top",
+   "lat_right_bottom",
+   "lng_left_top",
+   "lng_right_bottom"
+  ],
+  "props": {
+   "lat_left_top": {
+    "type": "number",
+    "desc": "",
+    "example": 35
+   },
+   "lng_left_top": {
+    "type": "number",
+    "desc": "",
+    "example": 131
+   },
+   "lat_right_bottom": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   },
+   "lng_right_bottom": {
+    "type": "integer",
+    "desc": "",
+    "example": 135
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot/polygon",
+  "summary": "2D网格编码(多边形)",
+  "required": [
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": "第一个纬度点必须和最后 一个纬度点相同,多边形封 闭,多个用逗号(,)分割",
+    "example": "31,32,31.5,31"
+   },
+   "lngs": {
+    "type": "string",
+    "desc": "第一个经度点必须和最后 一个经度点相同,多边形封 闭,多个用逗号(,)分割",
+    "example": "131,134,125,131"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot/multi_polygon",
+  "summary": "2D网格编码(多多边形)",
+  "required": [
+   "coordinates",
+   "geo_level"
+  ],
+  "props": {
+   "coordinates": {
+    "type": null,
+    "desc": "多个多边形不相交或者镶 套格式:\n[\n[\n[\n[经度,纬度],[经度, 纬度]...[经度,纬度]\n] ],\n[\n[\n[经度,纬度],[经度, 纬度]...[经",
+    "example": [
+     "[[[[102.00228452682494,36.06935975726796],[102.00747728347778,36.0693597 5726796],[102.00747728347778,36.07157980152828],[102.00228452682494,36.07157980152828],[102.00228452682494,36.06935975726796]]],[[[102.00494527816772,36.06778140644369],[102.00700521469116,36.06778140644369],[102.00700521469116,36.06854456903837],[102.00494527816772,36.06854456903837],[10 2.00494527816772,36.06778140644369]]]]",
+     "[[[[102.00338959693907,36.06846651865833],[102.00761675834656,36.0684665 1865833],[102.00761675834656,36.070287674013976], [102.00338959693907,36.070287674013976],[102.00338959693907,36.06846651865833]],[[102.00504183769225,36.06906490292607],[102.0065438747406,36.06 906490292607],[102.0065438747406,36.069854069420316], [102.00504183769225,36.069854069420316],[102.00504183769225,36.06906490 292607]]]]"
+    ]
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "23",
+    "example": "12"
+   }
+  }
+ },
+ {
+  "path": "/geosot/geojson",
+  "summary": "2D网格编码(GeoJSON 格式)",
+  "required": [
+   "geo_level",
+   "geojson"
+  ],
+  "props": {
+   "geojson": {
+    "type": "string",
+    "desc": "",
+    "example": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"properties\":{},\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[116.42726898193358,39.801480728852646] ,[116.42473697662352,39.79917275918698],[116.42555236816406,39.79607336378827],[116.42877101898195,39.797491189655],[116.42726898193358,39.801480728852646]]]}}]}"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot/aggregation_geo_num",
+  "summary": "2D网格聚合(网格编码数组)",
+  "required": [
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "526542573288816640-17,526542576510042112-17,526542575436300288-17，526542578657525760-17,526548443435368448-17\n"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 15
+   }
+  }
+ },
+ {
+  "path": "/geosot/aggregation_geo_num2",
+  "summary": "2D网格聚合(多边形)",
+  "required": [
+   "geo_level",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "lngs": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ },
+ {
+  "path": "/geosot/sphere_distance_geo_num",
+  "summary": "2D网格间球面距离",
+  "required": [
+   "begin_geo_num",
+   "end_geo_num",
+   "geo_level"
+  ],
+  "props": {
+   "begin_geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412869894950879232-20"
+   },
+   "end_geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412894386465013760-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/ellipsoid_distance_geo_num",
+  "summary": "2D网格间椭球面距离",
+  "required": [
+   "begin_geo_num",
+   "end_geo_num",
+   "geo_level"
+  ],
+  "props": {
+   "begin_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894950879232-20"
+   },
+   "end_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412894386465013760-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/position_geo_num",
+  "summary": "2D网格相对位置关系",
+  "required": [
+   "begin_geo_num",
+   "end_geo_num",
+   "geo_level"
+  ],
+  "props": {
+   "begin_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "526548443650588672-23"
+   },
+   "end_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "526542577192402944-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/side_len_geo_num",
+  "summary": "2D网格经向和纬向边长",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "526548443650588672-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/area_geo_num",
+  "summary": "2D网格面积",
+  "required": [
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "526548443650588672-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/circumference_geo_num",
+  "summary": "2D网格周长",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "526548443650588672-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/topological_relation_geo_num",
+  "summary": "2D网格间拓扑类型判断(包含/相邻/相离)",
+  "required": [
+   "geo_level1",
+   "geo_level2",
+   "geo_num1",
+   "geo_num2"
+  ],
+  "props": {
+   "geo_num1": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "526548443650588672-23"
+   },
+   "geo_level1": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   },
+   "geo_num2": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "526548443650588672-23"
+   },
+   "geo_level2": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/azimuth_geo_num",
+  "summary": "2D网格定量方位计算",
+  "required": [
+   "geo_level",
+   "geo_num1",
+   "geo_num2"
+  ],
+  "props": {
+   "geo_num1": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894950879232-20"
+   },
+   "geo_num2": {
+    "type": "string",
+    "desc": "",
+    "example": "412894386465013760-23"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/adjoin_azimuth_geo_num",
+  "summary": "2D网格指定方向的邻域网格(精确方向,输入方位角值)",
+  "required": [],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894950879232-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   },
+   "azimuth": {
+    "type": "number",
+    "desc": "",
+    "example": 1.4535492208719423
+   }
+  }
+ },
+ {
+  "path": "/geosot/adjoin_direction_geo_num",
+  "summary": "2D网格指定方向的邻域网格(模糊方向,如东南、西北)",
+  "required": [
+   "direction",
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895001210880-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   },
+   "direction": {
+    "type": "integer",
+    "desc": "八方:0-7,北起顺时针",
+    "example": 2
+   }
+  }
+ },
+ {
+  "path": "/geosot/adjoin4_geo_num",
+  "summary": "2D网格的 4 邻域",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "412869895001210880-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot/adjoin8_geo_num",
+  "summary": "2D网格的 8 邻域",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": " 十进制网格编码",
+    "example": "412869894950879232-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot/child_geo_num",
+  "summary": "2D子网格编码",
+  "required": [
+   "child_level",
+   "geo_level"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895051542528-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   },
+   "child_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   }
+  }
+ },
+ {
+  "path": "/geosot/son_geo_num_list",
+  "summary": "2D子级网格编码范围",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895034765312-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot/parent_geo_num",
+  "summary": "2D父网格编码",
+  "required": [
+   "geo_level",
+   "geo_num",
+   "parent_level"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895051542528-21"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   },
+   "parent_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot/area_geo_num_list",
+  "summary": "2D网格集面积",
+  "required": [
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895034765312,412869895043153920"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   }
+  }
+ },
+ {
+  "path": "/geosot/avg_distance_geo_num_list",
+  "summary": "2D网格集平均距离",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895034765312,412869895038959616"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895019582400,412869895027971008"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   }
+  }
+ },
+ {
+  "path": "/geosot/orientation_direction_geo_num_list",
+  "summary": "2D网格集与网格集间定性方向",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895027971008"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895032165312"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   }
+  }
+ },
+ {
+  "path": "/geosot/orientation_azimuth_geo_num_list",
+  "summary": "2D网格集与网格集间定量方向",
+  "required": [
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895027971008"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895032165312"
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "",
+    "example": "21"
+   }
+  }
+ },
+ {
+  "path": "/geosot/topological_relation_geo_num_list",
+  "summary": "2D网格集间拓扑类型判断(包含/相邻/相离)",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895051542528,412869895055736832,412869895051542528"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "",
+    "example": "41286231038959616,41286231043153920,41286231047348224"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   }
+  }
+ },
+ {
+  "path": "/geosot/outer_rectangle_geo_num_list",
+  "summary": "2D网格集最小外包矩形对应面片(面片可能数量 1~4 个,输出网格面片和对应层级)",
+  "required": [
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "41286231051542528,41286231047348224,41286231038959616"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 21
+   }
+  }
+ },
+ {
+  "path": "/geosot/path_geo_num",
+  "summary": "2D网格路径查询",
+  "required": [
+   "begin_geo_num",
+   "end_geo_num",
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "526542574328741888,526542579323895808"
+   },
+   "begin_geo_num": {
+    "type": "string",
+    "desc": "十进制网格编码",
+    "example": "526542574328741888"
+   },
+   "end_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "526542579323895808"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 23
+   }
+  }
+ },
+ {
+  "path": "/geosot/traversal_geo_num",
+  "summary": "2D多边形内网格遍历",
+  "required": [
+   "geo_level",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": "",
+    "example": "36,36.8,37.2,35.5,36"
+   },
+   "lngs": {
+    "type": "string",
+    "desc": "",
+    "example": "113,113.5,114.3,116,113"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot/video_model",
+  "summary": "2D网格视频空间建模",
+  "required": [
+   "geo_level",
+   "geographic_points",
+   "is_show",
+   "pixel_points",
+   "plane_pixel_x",
+   "plane_pixel_y"
+  ],
+  "props": {
+   "pixel_points": {
+    "type": "string",
+    "desc": "配准点的像素坐标，每个像素点的宽高拼接成一个数组，每个点宽度在前。\n与 geographic_points 一一对应。 4-8 个配准点",
+    "example": "528,993,737,234,1114,275,1150,907"
+   },
+   "geographic_points": {
+    "type": "string",
+    "desc": "配准点的地理坐标，每个点的经纬度拼接成一个数组，每个点纬度在前。\n与 pixel_points 一一对应。4-8 个 配准点",
+    "example": "39.95867556,116.30469561,39.95943893,116.30467482, 39.95939358,116.30502628,39.95874359,116.3050395"
+   },
+   "is_show": {
+    "type": "integer",
+    "desc": "是否生成网格编码数组，0:只生成变换矩阵;1:生成变换 矩阵、该可见区域的网格编码数组以及网格编码对应的像素坐标",
+    "example": 1
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "当 is_show 为 0,该参数为空",
+    "example": 15
+   },
+   "plane_pixel_y": {
+    "type": "string",
+    "desc": "视频覆盖的某一平面可见区域的像素高坐标；当 is_show 为 0,该参数为空；当 is_show 为 1 时,像素坐标个数>=3",
+    "example": "993,234,275,907"
+   },
+   "plane_pixel_x": {
+    "type": "string",
+    "desc": "视频覆盖的某一平面可见区域的像素宽坐标；当 is_show 为 0,该参数为空; 当 is_show 为 1 时,像素坐标个 数>=3",
+    "example": "528,737,1114,1150"
+   }
+  }
+ },
+ {
+  "path": "/geosot/point_buffer",
+  "summary": "2D点的缓冲区域",
+  "required": [
+   "distance",
+   "geo_level",
+   "lat",
+   "lng"
+  ],
+  "props": {
+   "lat": {
+    "type": "number",
+    "desc": "",
+    "example": 31
+   },
+   "lng": {
+    "type": "number",
+    "desc": "",
+    "example": 131
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 15
+   },
+   "distance": {
+    "type": "number",
+    "desc": "",
+    "example": 100
+   }
+  }
+ },
+ {
+  "path": "/geosot/line_buffer",
+  "summary": "2D线的缓冲区域",
+  "required": [
+   "distance",
+   "geo_level",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "number",
+    "desc": ""
+   },
+   "lngs": {
+    "type": "number",
+    "desc": ""
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   },
+   "distance": {
+    "type": "number",
+    "desc": "",
+    "example": 100
+   }
+  }
+ },
+ {
+  "path": "/geosot/polygon_buffer",
+  "summary": "2D面的缓冲区域",
+  "required": [
+   "distance",
+   "geo_level",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": "",
+    "example": "31,31,32,31"
+   },
+   "lngs": {
+    "type": "string",
+    "desc": "",
+    "example": "131,124,123,131"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   },
+   "distance": {
+    "type": "number",
+    "desc": "",
+    "example": 100
+   }
+  }
+ },
+ {
+  "path": "/geosot/overlay_analysis_intersection",
+  "summary": "2D叠置分析(交)",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895051542528-20,412869895034765312-20,412869895101874176-20,412869894934102016-20,412869895001210880-20,412869894917324800-20,412869894900547584-20,412869894967656448-20"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894950879232-20,412869894934102016-20,412869895001210880-20,412869894900547584-20,412869894967656448-20,412869894548226048-20,412869894531448832-20,412869894598557696-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot/overlay_analysis_union",
+  "summary": "2D叠置分析(并)",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895051542528-20,412869895034765312-20,412869895101874176-20,412869894934102016-20,412869895001210880-20,412869894917324800-20,412869894900547584-20,412869894967656448-20"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894950879232-20,412869894934102016-20,412869895001210880-20,412869894900547584-20,412869894967656448-20,412869894548226048-20,412869894531448832-20,412869894598557696-20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot/grid_heat_gather",
+  "summary": "2D网格热力汇聚",
+  "required": [
+   "gather_level",
+   "geo_data_list",
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "525895054355595264,412894386465013760"
+   },
+   "geo_data_list": {
+    "type": "string",
+    "desc": "",
+    "example": "10,20"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   },
+   "gather_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 9
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/center_point3d",
+  "summary": "3D网格中心经纬度",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "十六进制网格编码",
+    "example": "00b218240000000000000000"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/extract_geo_num_2d",
+  "summary": "3D编码中提取2D编码",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "00b218240000000000000000"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/scope_geo_num",
+  "summary": "3D网格体编码地理范围",
+  "required": [
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "00b21825260a0024002cb043"
+   },
+   "geo_level": {
+    "type": "string",
+    "desc": "",
+    "example": "10"
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/point3d",
+  "summary": "3D网格编码(点)",
+  "required": [
+   "geo_level",
+   "height",
+   "lat",
+   "lng"
+  ],
+  "props": {
+   "lat": {
+    "type": "number",
+    "desc": "",
+    "example": 31
+   },
+   "lng": {
+    "type": "number",
+    "desc": "",
+    "example": 131
+   },
+   "height": {
+    "type": "number",
+    "desc": "",
+    "example": 102
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/sphere",
+  "summary": "3D网格编码(球)",
+  "required": [],
+  "props": {
+   "center_lat": {
+    "type": "string",
+    "desc": "",
+    "example": "31"
+   },
+   "center_lng": {
+    "type": "string",
+    "desc": "",
+    "example": "131"
+   },
+   "center_height": {
+    "type": "string",
+    "desc": "",
+    "example": "300"
+   },
+   "radius": {
+    "type": "string",
+    "desc": "",
+    "example": "100"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 12
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/rect3d",
+  "summary": "3D网格编码(矩形体)",
+  "required": [
+   "geo_level",
+   "height_end",
+   "height_start",
+   "lat_left_top",
+   "lat_right_bottom",
+   "lng_left_top",
+   "lng_right_bottom"
+  ],
+  "props": {
+   "lat_left_top": {
+    "type": "number",
+    "desc": "",
+    "example": 31
+   },
+   "lat_right_bottom": {
+    "type": "number",
+    "desc": "",
+    "example": 29
+   },
+   "lng_left_top": {
+    "type": "number",
+    "desc": "",
+    "example": 131
+   },
+   "lng_right_bottom": {
+    "type": "number",
+    "desc": "",
+    "example": 134
+   },
+   "height_start": {
+    "type": "number",
+    "desc": "",
+    "example": 100
+   },
+   "height_end": {
+    "type": "number",
+    "desc": "",
+    "example": 400
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/polygon3d",
+  "summary": "3D网格编码(多边形体)",
+  "required": [
+   "geo_level",
+   "height_end",
+   "height_start",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": ""
+   },
+   "lngs": {
+    "type": "string",
+    "desc": ""
+   },
+   "height_start": {
+    "type": "number",
+    "desc": ""
+   },
+   "height_end": {
+    "type": "number",
+    "desc": ""
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/polyline3d",
+  "summary": "3D网格编码(折线体)",
+  "required": [
+   "geo_level",
+   "heights",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": ""
+   },
+   "lngs": {
+    "type": "string",
+    "desc": ""
+   },
+   "heights": {
+    "type": "string",
+    "desc": ""
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/cylinder",
+  "summary": "3D网格编码(圆柱)",
+  "required": [
+   "geo_level",
+   "heights",
+   "lats",
+   "lngs"
+  ],
+  "props": {
+   "lats": {
+    "type": "string",
+    "desc": "",
+    "example": "39.921,39.921"
+   },
+   "lngs": {
+    "type": "string",
+    "desc": "",
+    "example": "116.392,116.392"
+   },
+   "heights": {
+    "type": "string",
+    "desc": "",
+    "example": "0,2000"
+   },
+   "radius": {
+    "type": "number",
+    "desc": "",
+    "example": 100
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 17
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/child_geo_num",
+  "summary": "3D子网格编码",
+  "required": [
+   "geo_level",
+   "layer_off_set"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "92fb3e924924924924804120"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 8
+   },
+   "layer_off_set": {
+    "type": "integer",
+    "desc": "",
+    "example": 9
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/parent_geo_num",
+  "summary": "3D父网格编码",
+  "required": [
+   "geo_level",
+   "geo_num",
+   "layer_off_set"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "92fb3e924924924924804120"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 8
+   },
+   "layer_off_set": {
+    "type": "integer",
+    "desc": "",
+    "example": 7
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/adjoin6_geo_num",
+  "summary": "3D网格体的 6 邻域",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "92fb3e924924924924804120"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 8
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/adjoin26_geo_num",
+  "summary": "3D网格体的 26 邻域",
+  "required": [
+   "geo_level",
+   "geo_num"
+  ],
+  "props": {
+   "geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "92fb3e924924924924804120"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 8
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/relative_azimuth",
+  "summary": "3D网格定量方位计算",
+  "required": [
+   "geo_level",
+   "geo_num1",
+   "geo_num2"
+  ],
+  "props": {
+   "geo_num1": {
+    "type": "string",
+    "desc": "",
+    "example": "412869895051542528"
+   },
+   "geo_num2": {
+    "type": "string",
+    "desc": "",
+    "example": "412869894967656448"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 20
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/distance_manhattan",
+  "summary": "3D网格体之间距离编码(曼哈顿计算)",
+  "required": [
+   "begin_geo_num",
+   "end_geo_num",
+   "geo_level"
+  ],
+  "props": {
+   "begin_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "040493600000000000000000"
+   },
+   "end_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "019009000000000000000000"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "",
+    "example": 10
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/aggregation_intersect",
+  "summary": "3D网格集间相交关系判断",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/aggregation_adjoin",
+  "summary": "3D网格集间相邻关系判断",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/aggregation_relationship",
+  "summary": "3D网格集间拓扑类型关系判断(相邻/相交/相离)",
+  "required": [
+   "geo_level",
+   "geo_num_list_a",
+   "geo_num_list_b"
+  ],
+  "props": {
+   "geo_num_list_a": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_num_list_b": {
+    "type": "string",
+    "desc": "多个用逗号(,)分割"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/rcuboid_buffer",
+  "summary": "3D网格编码(外包长方体)",
+  "required": [
+   "height",
+   "height_start",
+   "lat_left_bottom",
+   "lat_left_top",
+   "lng_left_bottom",
+   "lng_left_top"
+  ],
+  "props": {
+   "lat_left_top": {
+    "type": "number",
+    "desc": "外包长方体左上角纬度"
+   },
+   "lng_left_top": {
+    "type": "number",
+    "desc": "外包长方体左上角经度"
+   },
+   "lat_left_bottom": {
+    "type": "number",
+    "desc": "外包长方体右下角纬度"
+   },
+   "lng_left_bottom": {
+    "type": "number",
+    "desc": "外包长方体右下角经度"
+   },
+   "height_start": {
+    "type": "number",
+    "desc": "外包长方体距地面高度"
+   },
+   "height": {
+    "type": "number",
+    "desc": "外包长方体高度"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": "网格层级 "
+   }
+  }
+ },
+ {
+  "path": "/geosot3d/visual_analysis",
+  "summary": "3D网格可视域分析",
+  "required": [
+   "begin_geo_num",
+   "end_geo_num",
+   "geo_level",
+   "geo_num_list"
+  ],
+  "props": {
+   "geo_num_list": {
+    "type": "string",
+    "desc": "",
+    "example": "环境网格编码"
+   },
+   "begin_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "起点编码"
+   },
+   "end_geo_num": {
+    "type": "string",
+    "desc": "",
+    "example": "终点编码"
+   },
+   "geo_level": {
+    "type": "integer",
+    "desc": ""
+   }
+  }
+ }
+]

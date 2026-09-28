@@ -898,6 +898,7 @@ CPSI 适用于以下场景：
 > **注意**：CPSI 会泄露交集的基数信息，在隐私要求极高的场景中应谨慎使用。
 > 如需完整隐私保护（不泄露交集大小），请使用普通 PSI 协议。
 
+
 ## 十四、无人机起降场选址算法（基于网格）
 
 ### 14.1 功能概述
@@ -1092,3 +1093,212 @@ print(f"约 {vol['total_volume_km3']:.6f} km³")
 总体积: 149,944,912.53 m³
 约 0.149945 km³
 ```
+## 十五、iWhere 功能复现与代码补齐（2026-09-24 更新）
+
+本次更新应用了 `fix/附件A03_iWhere复现代码与验证证据/code/` 中的关键修复和改进，同时保留了所有无人机相关的特定功能。
+
+### 15.1 严重缺陷修复
+
+#### 1. visual_analysis() 崩溃修复
+**问题**：第946行 `if False else None` 后立即解包 None，导致函数总是崩溃。
+
+**修复**：
+- 添加 `_segment_intersects_box()` 辅助函数实现 3D 线段/AABB 相交测试
+- 使用 `gc.center_point3d()` 获取端点 3D 坐标
+- 实现正确的 3D 可视域分析：1=可见，0=遮挡
+
+#### 2. path_geo_num() 安全保护
+**问题**：BFS 路径搜索无安全保护，可导致内存溢出或死循环。
+
+**修复**：
+- 添加 `max_nodes=100000` 参数限制搜索节点数
+- 起点/终点在障碍物上时立即返回空路径
+- 起点等于终点时返回单元素路径
+- BFS 邻居边界检查（防止越界）
+- 资源限制检查（防止 OOM）
+- 无路径检查（防止 KeyError）
+
+#### 3. h_overlay_intersection() 逻辑修复
+**问题**：函数只解析列表 A，返回 A 全集而非 A∩B。
+
+**修复**：
+- 解析列表 B
+- 验证无混合层级输入
+- 计算真实集合交集：`members = {c for c,_ in b}; out = [c for c,_ in a if c in members]`
+
+### 15.2 验证改进
+
+#### 1. height_index() 严格验证
+**旧行为**：负高度时静默返回 0。
+
+**新行为**：
+```python
+if not math.isfinite(height) or height < 0:
+    raise ValueError("legacy heightprofile supports only finite nonnegative height")
+```
+
+#### 2. geo_num3d() 输入验证
+**新增验证**：
+```python
+if not isinstance(level, int) or not 1 <= level <= 32:
+    raise ValueError("level must be an integer in [1,32]")
+if not (math.isfinite(lat) and math.isfinite(lng) and 0 <= lat < 88 and 0 <= lng < 180):
+    raise ValueError("legacy reconstruction only validates NE nonpolar coordinates (0<=lat<88, 0<=lng<180)")
+```
+
+#### 3. _checked_code() 辅助函数
+**新增**：验证编码值是否适合指定的维度（2D=64位，3D=96位）。
+
+```python
+def _checked_code(code, dim):
+    if dim not in (2, 3):
+        raise ValueError('dim must be 2 or 3')
+    bits = 64 if dim == 2 else 96
+    if isinstance(code, bool) or not isinstance(code, int) or not 0 <= code < (1 << bits):
+        raise ValueError('code must fit the selected unsigned 64/96-bit domain')
+    return code
+```
+
+### 15.3 序列化格式（双格式支持）
+
+#### 当前格式（默认，自描述）
+保留现有的 16 字节自描述格式，包含 level 和 dim 元数据：
+
+```python
+# 编码
+buf = gc.to_bytes16(code, dim=2, level=19)  # 16 字节，包含元数据
+
+# 解码
+code, level, dim = gc.from_bytes16(buf)  # 返回完整信息
+```
+
+#### Simple 格式（新增，iWhere 兼容）
+添加简单 big-endian 格式，与 iWhere 引擎兼容：
+
+```python
+# 编码
+buf = gc.to_bytes16_simple(code, dim=2)  # 16 字节，无元数据
+
+# 解码
+code = gc.from_bytes16_simple(buf, dim=2)  # 仅返回编码值
+```
+
+**序列化验证改进**：
+- `from_binary128()`: 验证输入为 128 个二进制字符，验证填充位为 0
+- `from_bytes16()`: 验证编码值适合指定的维度
+- `to_bytes16()`: 验证编码值适合指定的维度
+
+### 15.4 新增模块
+
+#### 1. cell_contract.py - Cell v2 数据契约系统
+- 严格 RFC 3339 时间解析（拒绝小写 t/z、缺少秒、闰秒等）
+- 网格规范化与验证（命名空间、版本、维度、层级、CRS）
+- 观测值管理（幂等性、修订冲突检测）
+- 规范化键生成（用于 PSI/MPC 匹配）
+- 本地条件评估（TRUE/FALSE/UNKNOWN/CONFLICT）
+- 安全算子描述（始终返回 NOT_IMPLEMENTED，不伪造密码结果）
+
+#### 2. request_validation.py - 严格请求验证
+- Schema 驱动：从 `schemas.json` 加载验证规则
+- 额外必填字段：补齐 OpenAPI schema 中的遗漏
+- 布尔拒绝：数值字段拒绝 True/False
+- Decimal 精度：使用 `decimal.Decimal` 避免浮点误差
+- 层级范围强制：`geo_level` 等参数必须在 [1,32]
+- 逗号分隔列表验证：支持中文逗号，验证每个元素为有限数
+
+#### 3. gbt40087_partial.py - GB/T 40087 部分实现
+- 工程键格式：`gbt40087_partial_v1:level:row:col:h`
+- 真实 DMS 位打包（1/7,372,800 度精度）
+- 指数高度层（附录 B 公式）
+- 适用范围：NE 非极区（0≤lat<88, 0≤lng<180），层级 9-32，高度 0-20000m
+
+### 15.5 API 改进
+
+#### 1. FastAPI 弹性导入
+```python
+try:
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse
+except ModuleNotFoundError:
+    FastAPI = None
+    # ... 降级处理
+```
+
+#### 2. HTTP 验证集成
+```python
+from request_validation import validate_form
+
+async def dispatch(prefix: str, ep: str, request: Request):
+    form = dict(await request.form())
+    validate_form(path, form)  # 验证请求
+    return handler(form)
+```
+
+#### 3. 丰富响应格式
+`h_child()` 和 `h_son_range()` 现在返回对象而非字符串：
+
+```python
+# 旧格式
+{'geo_num_list': ['123-20', '456-20']}
+
+# 新格式
+{'geo_num_list': [
+    {'geo_num': '123-20', 'lat_min': 30.0, 'lat_max': 30.1, ...},
+    {'geo_num': '456-20', 'lat_min': 30.1, 'lat_max': 30.2, ...}
+]}
+```
+
+`h3_scope()` 添加 `geo_num` 字段并扁平化边界字段：
+
+```python
+# 旧格式
+{'geo_num_list': [{'heightMin': 0, 'heightMax': 100, ...}]}
+
+# 新格式
+{'geo_num_list': [
+    {'geo_num': '123', 'height_min': 0, 'height_max': 100, 
+     'lat_min': 30.0, 'lat_max': 30.1, ...}
+]}
+```
+
+### 15.6 测试覆盖
+
+新增测试文件（位于 `src/tests/`）：
+
+| 文件 | 测试数 | 覆盖内容 |
+|------|--------|----------|
+| `test_cell_contract.py` | 12 | Cell v2 契约系统 |
+| `test_regression.py` | 20 | 缺陷回归（最关键） |
+| `test_gbt40087.py` | 多个 | GB/T 40087 标准符合性 |
+| `test_geofile.py` | 多个 | 地理文件解析 |
+| `test_unit.py` | 多个 | 核心单元测试 |
+| `test_data_encode.py` | 多个 | 数据编码流水线 |
+
+**运行测试**：
+```bash
+cd D:/code/geosot_work
+python -m unittest discover -s tests -v
+```
+
+### 15.7 向后兼容性
+
+- 现有序列化函数保持为默认（自描述格式）
+- 添加 `*_simple` 变体作为新函数（非破坏性）
+- 验证变更故意更严格（这是正确行为，拒绝无效输入）
+- 所有无人机相关功能完整保留（UAV 选址、空域计算、体积计算）
+
+### 15.8 已知限制
+
+1. **legacy 高度编码**：使用对数公式，原解码仍为线性乘法，不能作为完整国标几何真值
+2. **3D 几何覆盖**：`sphere` 主要是外包范围枚举，`cylinder` 按中心竖柱处理，`polyline3d` 为 2D 线覆盖与高度层笛卡尔组合
+3. **距离计算**：`distance_manhattan` 沿用大圆距离近似，未计入高度
+4. **密态计算**：`cell_contract.py` 提供契约原型，但缺少真实密码适配器，必须报未实现
+5. **标准符合性**：`gbt40087_partial.py` 是部分实现，不支持极区、其他半球、负高度
+
+### 15.9 参考资料
+
+- 修复源码：`fix/附件A03_iWhere复现代码与验证证据/code/`
+- 契约文档：`src/CELL_CONTRACT.md`
+- 测试日志：`fix/附件A03_iWhere复现代码与验证证据/verification/`
+
+> **注意**：本次更新基于 2026-09-24 的核验结果。114 个测试全部通过，包括原 82 项、数据契约 12 项、缺陷/partial profile/localhost HTTP 回归 20 项。

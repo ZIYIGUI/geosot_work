@@ -309,9 +309,23 @@ class TestClustering(unittest.TestCase):
 
     def test_cluster(self):
         """测试聚类和质心计算"""
+        # 使用较小的测试区域以避免内存问题
+        test_lower = [
+            (120.100, 30.550),
+            (120.105, 30.550),
+            (120.105, 30.555),
+            (120.100, 30.555)
+        ]
+        test_upper = [
+            (120.101, 30.551),
+            (120.104, 30.551),
+            (120.104, 30.554),
+            (120.101, 30.554)
+        ]
+
         # 构建网格
         grids = build_spatiotemporal_grids(
-            LOWER_POLYGON, UPPER_POLYGON,
+            test_lower, test_upper,
             H_MIN, H_MAX, LEVEL,
             TIME_START, TIME_END, DT
         )

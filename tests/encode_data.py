@@ -26,6 +26,7 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))   # tests/
 sys.path.insert(0, _HERE)
+sys.path.insert(0, os.path.dirname(_HERE))           # 项目根 (geosot_work/)
 sys.path.insert(0, os.path.join(os.path.dirname(_HERE), 'src'))  # src/ 目录
 import geofile as gf
 import geosot_core as gc
@@ -106,12 +107,13 @@ def encode_all(level=21, route='B', data_dir=DATA_DIR):
     return results
 
 
-def write_outputs(results, level=21, route='B', out_dir=OUT_DIR):
+def write_outputs(results, level=21, route='B', out_dir=None):
     """将编码结果写入 out/: codes.json / codes_128.bin / codes_16bytes.csv。
     返回产物文件路径 dict。
     - codes.json: 完整信息 (含 dim)
     - codes_128.bin: 每条 16 字节大端, 2D 码占低 8 字节, 3D 码占低 12 字节
     - codes_16bytes.csv: 仅一列 bytes16_hex (32 个 hex 字符), 与 bin 逐条对应"""
+    out_dir = OUT_DIR if out_dir is None else os.fspath(out_dir)
     os.makedirs(out_dir, exist_ok=True)
 
     # 1) codes.json
@@ -124,7 +126,7 @@ def write_outputs(results, level=21, route='B', out_dir=OUT_DIR):
     bpath = os.path.join(out_dir, 'codes_128.bin')
     with open(bpath, 'wb') as f:
         for r in results:
-            f.write(gc.to_bytes16(int(r['code'].split('-')[0]), dim=r['dim']))
+            f.write(gc.to_bytes16(int(r['code'].split('-')[0]), dim=r['dim'], level=r['code_level']))
 
     # 3) codes_16bytes.csv: 仅一列 bytes16_hex, 与 bin 顺序一一对应
     cpath = os.path.join(out_dir, 'codes_16bytes.csv')
@@ -140,12 +142,13 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description='data/ 地理数据 -> GeoSOT 网格编码 -> out/')
     ap.add_argument('--level', type=int, default=21, help='目标网格层级 (默认 21, 1" 网格)')
     ap.add_argument('--route', choices=['B', 'A'], default='B', help='编码路线 (默认 B)')
+    ap.add_argument('--out-dir', default=OUT_DIR, help='输出目录，可显式隔离回归产物')
     args = ap.parse_args(argv)
     results = encode_all(args.level, args.route)
-    paths = write_outputs(results, args.level, args.route)
-    print('已提取 %d 条网格编码 (level=%d, route=%s) -> %s' % (len(results), args.level, args.route, OUT_DIR))
-    for fn in sorted(os.listdir(OUT_DIR)):
-        fp = os.path.join(OUT_DIR, fn)
+    paths = write_outputs(results, args.level, args.route, args.out_dir)
+    print('已提取 %d 条网格编码 (level=%d, route=%s) -> %s' % (len(results), args.level, args.route, args.out_dir))
+    for fn in sorted(os.listdir(args.out_dir)):
+        fp = os.path.join(args.out_dir, fn)
         print('  %-22s %10d bytes' % (fn, os.path.getsize(fp)))
     return paths
 

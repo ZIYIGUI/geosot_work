@@ -9,12 +9,21 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import geosot_core as gc
 import geosot_service as svc
+from request_validation import validate_form
 
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+try:
+    from fastapi import FastAPI, Request
+    from fastapi.responses import JSONResponse
+except ModuleNotFoundError as exc:
+    if not exc.name.startswith('fastapi'):
+        raise
+    FastAPI = None
+    Request = object
+    JSONResponse = None
 
-app = FastAPI(title="GeoSOT-iWhere Engine (GB/T 40087 复现)", version="1.0.0",
-              description="依据 GeoSOT-iwhere-openapi.yaml 复现的 80 个网格编码与计算接口")
+app = (FastAPI(title="GeoSOT-iWhere legacy reconstruction", version="1.1.0",
+               description="依据 GeoSOT-iwhere-openapi.yaml 复现的 80 个网格编码与计算接口")
+       if FastAPI is not None else None)
 
 
 def _f(v, default=0.0):
@@ -561,7 +570,8 @@ def h_child(f):
     c = code if isinstance(code, int) else code
     lv = _i(f.get('geo_level'), level or 20)
     cl = _i(f.get('child_level'), lv + 1)
-    return _ok(geo_num_list=['%d-%d' % (x, cl) for x in gc.child_geo_num(c, lv, cl)])
+    return _ok(geo_num_list=[{'geo_num': '%d-%d' % (x, cl), **gc.scope_geo_num(x, cl)}
+                             for x in gc.child_geo_num(c, lv, cl)])
 
 
 def h_son_range(f):
@@ -570,7 +580,8 @@ def h_son_range(f):
     code, level = svc.parse_code(f.get('geo_num'))
     c = code if isinstance(code, int) else code
     lv = _i(f.get('geo_level'), level or 20)
-    return _ok(geo_num_list=['%d-%d' % (x, lv + 1) for x in gc.child_geo_num(c, lv, lv + 1)])
+    return _ok(geo_num_list=[{'geo_num': '%d-%d' % (x, lv + 1), **gc.scope_geo_num(x, lv + 1)}
+                             for x in gc.child_geo_num(c, lv, lv + 1)])
 
 
 def h_parent(f):
@@ -704,12 +715,17 @@ def h_polygon_buffer(f):
 
 
 def h_overlay_intersection(f):
-    """POST /geosot/overlay_analysis_intersection: 叠加求交 (黄金口径=输入A原样)。
+    """POST /geosot/overlay_analysis_intersection: 同层叠加求交；与原样例存在已记录差异。
     """
-    # 黄金示例: 引擎输出 = 输入 A 原样 (保持顺序)
+    # Same-level mathematical intersection. The recorded fixture returns all A
+    # even when B differs; do not preserve that sample-specific wrong operation.
     level = _i(f.get('geo_level'), 20)
     a = _codes2d(f.get('geo_num_list_a'))
-    out = [c for c, _ in a]
+    b = _codes2d(f.get('geo_num_list_b'))
+    if any(l not in (0, level, None) for _, l in a + b):
+        raise ValueError('mixed-level overlay requires an explicit coverage policy')
+    members = {c for c, _ in b}
+    out = list(dict.fromkeys(c for c, _ in a if c in members))
     return _ok(geo_num_list=['%d-%d' % (c, level) for c in out])
 
 
@@ -788,7 +804,10 @@ def h3_scope(f):
     for c in codes:
         c = c.strip()
         if c:
-            out.append(gc.scope_geo_num3d(_h3_in(c), level))
+            bounds = gc.scope_geo_num3d(_h3_in(c), level)
+            out.append({'geo_num': c, 'height_min': bounds['heightMin'], 'height_max': bounds['heightMax'],
+                        'lat_min': bounds['latMin'], 'lat_max': bounds['latMax'],
+                        'lng_min': bounds['lngMin'], 'lng_max': bounds['lngMax']})
     return _ok(geo_num_list=out)
 
 
@@ -1079,6 +1098,7 @@ async def dispatch(prefix: str, ep: str, request: Request):
         return _err('未知接口: %s' % path)
     form = dict(await request.form())
     try:
+        validate_form(path, form)
         return handler(form)
     except Exception as e:
         return _err('%s: %s' % (path, e))
