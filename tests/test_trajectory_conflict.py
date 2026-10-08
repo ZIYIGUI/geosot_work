@@ -22,6 +22,10 @@ import geosot_core as gc
 import geosot_service as svc
 from geofile import read_csv, encode_features
 
+# 添加 PSI 辅助工具路径
+sys.path.insert(0, os.path.join(PROJECT_ROOT, 'tests', 'uav_siting'))
+from psi_helpers import run_pairwise_psi, set_to_csv, csv_to_set
+
 
 # 轨迹文件路径
 TRAJ_1_PATH = os.path.join(PROJECT_ROOT, 'data', 'uav_conflict_1.csv')
@@ -91,6 +95,159 @@ def save_conflict_to_bin(conflict_codes, output_path):
             f.write(buf)
 
     return len(conflict_codes) * 16  # 返回写入字节数
+
+
+def expand_point_to_sphere(lng, lat, height, radius_m, level=21):
+    """将单个轨迹点扩展为球体内所有网格编码。
+
+    参数:
+        lng, lat: 经纬度
+        height: 高度（米）
+        radius_m: 安全距离（米）
+        level: 网格层级，默认 21
+
+    返回:
+        set: 球体内所有 3D 网格编码集合
+    """
+    codes = gc.sphere3d(lat, lng, height, radius_m, level)
+    return set(codes)
+
+
+def expand_trajectory_to_spheres(csv_path, radius_m, height=0, level=21):
+    """将整条轨迹的所有点扩展为球体，返回去重后的占用网格集合。
+
+    参数:
+        csv_path: 轨迹 CSV 文件路径
+        radius_m: 安全距离（米）
+        height: 默认高度（米），若 CSV 无高度列则使用
+        level: 网格层级
+
+    返回:
+        dict: {
+            'codes': set,              # 去重后的占用网格编码集合
+            'code_to_points': dict,    # {code: [(lng, lat, height), ...]}
+        }
+    """
+    features = read_csv(csv_path)
+    all_codes = set()
+    code_to_points = {}
+
+    for feat in features:
+        if feat['type'] != 'Point':
+            continue
+        lng, lat = feat['coords'][0]
+        h = feat.get('height', height)
+
+        # 扩展为球体
+        sphere_codes = expand_point_to_sphere(lng, lat, h, radius_m, level)
+        all_codes.update(sphere_codes)
+
+        # 记录每个编码对应的原始轨迹点
+        for code in sphere_codes:
+            if code not in code_to_points:
+                code_to_points[code] = []
+            code_to_points[code].append((lng, lat, h))
+
+    return {
+        'codes': all_codes,
+        'code_to_points': code_to_points,
+    }
+
+
+def detect_conflicts_with_psi(traj1_data, traj2_data, port=12120, timeout=60):
+    """使用 PSI 检测两条轨迹的冲突网格。
+
+    参数:
+        traj1_data: expand_trajectory_to_spheres() 返回的字典
+        traj2_data: expand_trajectory_to_spheres() 返回的字典
+        port: PSI 端口号
+        timeout: 超时秒数
+
+    返回:
+        dict: {
+            'conflict_codes': set,      # 冲突网格编码集合
+            'traj1_conflict_points': list,  # 轨迹1中与冲突网格关联的坐标
+            'traj2_conflict_points': list,  # 轨迹2中与冲突网格关联的坐标
+        }
+    """
+    # 调用 PSI 求交
+    result = run_pairwise_psi(
+        traj1_data['codes'],
+        traj2_data['codes'],
+        port=port,
+        card_only=False,
+        timeout=timeout
+    )
+    conflict_codes = result['intersection']
+
+    # 找到冲突网格对应的轨迹坐标
+    traj1_points = set()
+    traj2_points = set()
+
+    for code in conflict_codes:
+        # 轨迹1中与冲突网格关联的点
+        if code in traj1_data['code_to_points']:
+            for pt in traj1_data['code_to_points'][code]:
+                traj1_points.add(pt)
+
+        # 轨迹2中与冲突网格关联的点
+        if code in traj2_data['code_to_points']:
+            for pt in traj2_data['code_to_points'][code]:
+                traj2_points.add(pt)
+
+    return {
+        'conflict_codes': conflict_codes,
+        'traj1_conflict_points': sorted(traj1_points),
+        'traj2_conflict_points': sorted(traj2_points),
+    }
+
+
+def find_nearest_trajectory_point(conflict_code, code_to_points, level=21):
+    """找到冲突网格编码的中心点，并返回最近的轨迹坐标。
+
+    参数:
+        conflict_code: 冲突网格编码
+        code_to_points: {code: [(lng, lat, height), ...]}
+        level: 网格层级
+
+    返回:
+        tuple: (nearest_lng, nearest_lat, nearest_height, distance_m)
+    """
+    if conflict_code not in code_to_points:
+        return None
+
+    # 获取网格中心点
+    center_lat, center_lng, center_h = gc.center_point3d(conflict_code, level)
+
+    # 找到最近的轨迹点
+    min_dist = float('inf')
+    nearest = None
+
+    for (lng, lat, h) in code_to_points[conflict_code]:
+        dist = gc._haversine_atan2(center_lat, center_lng, lat, lng)
+        if dist < min_dist:
+            min_dist = dist
+            nearest = (lng, lat, h)
+
+    return (*nearest, min_dist) if nearest else None
+
+
+def summarize_conflicts(conflict_result, max_output=20):
+    """输出冲突摘要信息。
+
+    参数:
+        conflict_result: detect_conflicts_with_psi() 返回的字典
+        max_output: 最多输出的冲突点数量
+    """
+    print(f"\n冲突网格数量: {len(conflict_result['conflict_codes'])}")
+    print(f"轨迹1涉及冲突的坐标点: {len(conflict_result['traj1_conflict_points'])}")
+    print(f"轨迹2涉及冲突的坐标点: {len(conflict_result['traj2_conflict_points'])}")
+
+    if conflict_result['traj1_conflict_points']:
+        n = min(max_output, len(conflict_result['traj1_conflict_points']))
+        print(f"\n轨迹1前 {n} 个冲突坐标:")
+        for pt in conflict_result['traj1_conflict_points'][:max_output]:
+            print(f"  ({pt[0]:.6f}, {pt[1]:.6f}, {pt[2]:.1f}m)")
 
 
 class TestTrajectoryConflict(unittest.TestCase):
@@ -168,14 +325,141 @@ class TestTrajectoryConflict(unittest.TestCase):
         print(f"\n已保存 {len(conflicts)} 个冲突编码到: {OUT_BIN_PATH}")
         print(f"文件大小: {file_size} 字节")
 
+    def test_expand_point_to_sphere(self):
+        """测试单点球体扩展"""
+        # 测试点: (116.3, 39.91), 高度100m, 半径50m
+        lng, lat, height = 116.3, 39.91, 100.0
+        radius = 50.0
+        level = 21
+
+        codes = expand_point_to_sphere(lng, lat, height, radius, level)
+
+        # 球体应包含多个网格编码
+        self.assertGreater(len(codes), 1, "球体应包含多个网格编码")
+        self.assertLess(len(codes), 1000, "球体编码数应合理")
+
+        # 所有编码应为正整数
+        for code in codes:
+            self.assertIsInstance(code, int)
+            self.assertGreater(code, 0)
+
+        print(f"\n单点球体扩展: {len(codes)} 个网格编码")
+
+    def test_expand_trajectory_to_spheres(self):
+        """测试整条轨迹球体扩展"""
+        radius = 50.0
+        height = 100.0
+        level = 21
+
+        traj_data = expand_trajectory_to_spheres(
+            TRAJ_1_PATH, radius, height, level
+        )
+
+        # 应返回字典结构
+        self.assertIn('codes', traj_data)
+        self.assertIn('code_to_points', traj_data)
+
+        # 占用网格数应大于原始航点数（因为每个点扩展为多个网格）
+        self.assertGreater(len(traj_data['codes']), 1000, "占用网格数应足够多")
+
+        # code_to_points 应有映射
+        self.assertGreater(len(traj_data['code_to_points']), 0)
+
+        print(f"\n轨迹1球体扩展: {len(traj_data['codes'])} 个占用网格")
+
+    def test_detect_conflicts_with_psi(self):
+        """测试 PSI 冲突检测"""
+        radius = 50.0
+        height = 100.0
+        level = 21
+
+        # 扩展两条轨迹
+        traj1_data = expand_trajectory_to_spheres(
+            TRAJ_1_PATH, radius, height, level
+        )
+        traj2_data = expand_trajectory_to_spheres(
+            TRAJ_2_PATH, radius, height, level
+        )
+
+        # 使用 PSI 检测冲突
+        conflict_result = detect_conflicts_with_psi(
+            traj1_data, traj2_data, port=12130, timeout=60
+        )
+
+        # 应返回字典结构
+        self.assertIn('conflict_codes', conflict_result)
+        self.assertIn('traj1_conflict_points', conflict_result)
+        self.assertIn('traj2_conflict_points', conflict_result)
+
+        # 两条重叠轨迹应有冲突
+        self.assertGreater(
+            len(conflict_result['conflict_codes']), 0,
+            "两条重叠轨迹应有冲突网格"
+        )
+
+        # 冲突网格应对应轨迹坐标
+        self.assertGreater(
+            len(conflict_result['traj1_conflict_points']), 0,
+            "轨迹1应有冲突坐标"
+        )
+        self.assertGreater(
+            len(conflict_result['traj2_conflict_points']), 0,
+            "轨迹2应有冲突坐标"
+        )
+
+        print(f"\nPSI 冲突检测:")
+        print(f"  冲突网格数: {len(conflict_result['conflict_codes'])}")
+        print(f"  轨迹1冲突点: {len(conflict_result['traj1_conflict_points'])}")
+        print(f"  轨迹2冲突点: {len(conflict_result['traj2_conflict_points'])}")
+
+    def test_find_nearest_trajectory_point(self):
+        """测试最近轨迹坐标查找"""
+        radius = 50.0
+        height = 100.0
+        level = 21
+
+        # 扩展轨迹
+        traj_data = expand_trajectory_to_spheres(
+            TRAJ_1_PATH, radius, height, level
+        )
+
+        # 取第一个冲突网格测试
+        if len(traj_data['code_to_points']) > 0:
+            test_code = next(iter(traj_data['code_to_points'].keys()))
+            result = find_nearest_trajectory_point(
+                test_code, traj_data['code_to_points'], level
+            )
+
+            # 应返回四元组
+            self.assertIsNotNone(result)
+            self.assertEqual(len(result), 4)
+
+            lng, lat, h, dist = result
+            self.assertIsInstance(lng, float)
+            self.assertIsInstance(lat, float)
+            self.assertIsInstance(h, (int, float))
+            self.assertIsInstance(dist, float)
+            self.assertGreaterEqual(dist, 0)
+
+            print(f"\n最近轨迹点: ({lng:.6f}, {lat:.6f}, {h:.1f}m), 距离: {dist:.2f}m")
+
 
 def main():
     """独立运行时执行完整流程并输出耗时统计"""
     import time
 
+    # 配置参数
+    SAFETY_DISTANCE = 50.0  # 安全距离 50 米
+    DEFAULT_HEIGHT = 100.0  # 默认高度 100 米
+    LEVEL = 21
+    PSI_PORT = 12140
+
     print("=" * 60)
-    print("无人机轨迹冲突检测")
+    print("无人机轨迹冲突检测（安全距离球体扩展）")
     print("=" * 60)
+    print(f"\n安全距离: {SAFETY_DISTANCE} 米")
+    print(f"默认高度: {DEFAULT_HEIGHT} 米")
+    print(f"网格层级: {LEVEL}")
 
     # 读取轨迹文件并计时
     print(f"\n轨迹文件1: {TRAJ_1_PATH}")
@@ -188,31 +472,34 @@ def main():
     print(f"\n[1] 读取轨迹文件耗时: {read_time:.4f} 秒")
     print(f"    轨迹1航点数: {len(feats_1)}, 轨迹2航点数: {len(feats_2)}")
 
-    # 生成编码并计时
+    # 球体扩展并计时
     t1 = time.perf_counter()
-    codes_1 = read_trajectory_codes(TRAJ_1_PATH, level=21)
-    codes_2 = read_trajectory_codes(TRAJ_2_PATH, level=21)
-    encode_time = time.perf_counter() - t1
-    print(f"\n[2] 轨迹编码耗时: {encode_time:.4f} 秒")
-    print(f"    轨迹1编码数: {len(codes_1)}, 轨迹2编码数: {len(codes_2)}")
+    traj1_data = expand_trajectory_to_spheres(
+        TRAJ_1_PATH, SAFETY_DISTANCE, DEFAULT_HEIGHT, LEVEL
+    )
+    traj2_data = expand_trajectory_to_spheres(
+        TRAJ_2_PATH, SAFETY_DISTANCE, DEFAULT_HEIGHT, LEVEL
+    )
+    expand_time = time.perf_counter() - t1
+    print(f"\n[2] 球体扩展耗时: {expand_time:.4f} 秒")
+    print(f"    轨迹1占用网格: {len(traj1_data['codes'])}")
+    print(f"    轨迹2占用网格: {len(traj2_data['codes'])}")
 
-    # 计算交集并计时
+    # PSI 冲突检测并计时
     t2 = time.perf_counter()
-    conflicts = compute_conflict_codes(codes_1, codes_2)
-    intersect_time = time.perf_counter() - t2
-    print(f"\n[3] 计算交集耗时: {intersect_time:.4f} 秒")
+    conflict_result = detect_conflicts_with_psi(
+        traj1_data, traj2_data, port=PSI_PORT, timeout=120
+    )
+    psi_time = time.perf_counter() - t2
+    print(f"\n[3] PSI 冲突检测耗时: {psi_time:.4f} 秒")
 
-    # 保存到二进制文件并计时
-    t3 = time.perf_counter()
-    bytes_written = save_conflict_to_bin(conflicts, OUT_BIN_PATH)
-    save_time = time.perf_counter() - t3
+    # 输出冲突摘要
+    summarize_conflicts(conflict_result, max_output=10)
 
     # 汇总
     total_time = time.perf_counter() - t0
-    print(f"\n[4] 保存二进制文件耗时: {save_time:.4f} 秒")
     print(f"\n{'=' * 60}")
-    print(f"交集大小: {len(conflicts)} 个编码")
-    print(f"输出文件: {OUT_BIN_PATH} ({bytes_written} 字节)")
+    print(f"冲突网格数: {len(conflict_result['conflict_codes'])}")
     print(f"总耗时: {total_time:.4f} 秒")
     print(f"{'=' * 60}")
 

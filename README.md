@@ -425,7 +425,7 @@ python tests\coords_to_json.py --lat 39.9102778 --lng 116.3152778 --height 500 -
 | `uav_conflict_1.csv` | 10000 | 中心 (116.300, 39.910)，约 3.4km × 3km |
 | `uav_conflict_2.csv` | 10000 | 中心 (116.303, 39.910)，约 3.4km × 3km |
 
-两条轨迹覆盖区域重叠约 95%，产生 **5100 个航线冲突点**（在同一 21 级网格内）。
+两条轨迹覆盖区域重叠约 95%，产生大量航线冲突点。
 
 使用 `tests/gen_large_trajectories.py` 可重新生成轨迹数据：
 
@@ -433,14 +433,53 @@ python tests\coords_to_json.py --lat 39.9102778 --lng 116.3152778 --height 500 -
 python tests/gen_large_trajectories.py
 ```
 
-### 10.2 轨迹冲突检测
+### 10.2 安全距离球体扩展冲突检测
 
-`tests/test_trajectory_conflict.py` 实现轨迹冲突检测：
+`tests/test_trajectory_conflict.py` 实现基于安全距离的轨迹冲突检测：
 
-1. 读取两份轨迹 CSV 文件
-2. 为每个航点生成 21 级网格编码（路线 B）
-3. 计算两个编码集合的交集（冲突点）
-4. 将交集编码以 128 位二进制保存到 `out/conflict_codes_128.bin`
+**核心思想**：每个轨迹点不仅占用其所在网格，而是以该点为球心、安全距离 `d` 为半径的球体内所有网格。这样可以更准确地反映无人机的实际空间占用范围。
+
+**检测流程**：
+
+1. **球体扩展**：对每个轨迹点，调用 `gc.sphere3d(lat, lng, height, radius, level)` 计算球体内所有 3D 网格编码
+2. **去重合并**：将整条轨迹所有点的球体编码去重，形成该轨迹的占用网格集合
+3. **PSI 求交**：调用 `psi/frontend.exe` 执行隐私集合交集（PSI）协议，检测两条轨迹的冲突网格
+4. **最近坐标查找**：根据冲突网格编码，找到最近的轨迹坐标并输出
+
+**关键函数**：
+
+```python
+def expand_point_to_sphere(lng, lat, height, radius_m, level=21):
+    """将单个轨迹点扩展为球体内所有网格编码。"""
+    codes = gc.sphere3d(lat, lng, height, radius_m, level)
+    return set(codes)
+
+def expand_trajectory_to_spheres(csv_path, radius_m, height=0, level=21):
+    """将整条轨迹的所有点扩展为球体，返回去重后的占用网格集合。
+    
+    返回:
+        dict: {
+            'codes': set,              # 去重后的占用网格编码集合
+            'code_to_points': dict,    # {code: [(lng, lat, height), ...]}
+        }
+    """
+
+def detect_conflicts_with_psi(traj1_data, traj2_data, port=12120, timeout=60):
+    """使用 PSI 检测两条轨迹的冲突网格。
+    
+    返回:
+        dict: {
+            'conflict_codes': set,              # 冲突网格编码集合
+            'traj1_conflict_points': list,      # 轨迹1中与冲突网格关联的坐标
+            'traj2_conflict_points': list,      # 轨迹2中与冲突网格关联的坐标
+        }
+    """
+
+def find_nearest_trajectory_point(conflict_code, code_to_points, level=21):
+    """找到冲突网格编码的中心点，并返回最近的轨迹坐标。"""
+```
+
+**运行方式**：
 
 ```powershell
 # 独立运行（显示各阶段耗时）
@@ -450,16 +489,57 @@ python tests/test_trajectory_conflict.py
 python -m unittest tests.test_trajectory_conflict -v
 ```
 
-输出示例：
+**输出示例**：
 
 ```
+============================================================
+无人机轨迹冲突检测（安全距离球体扩展）
+============================================================
+
+安全距离: 50.0 米
+默认高度: 100.0 米
+网格层级: 21
+
 [1] 读取轨迹文件耗时: 0.0268 秒
-[2] 轨迹编码耗时: 0.0621 秒
-[3] 计算交集耗时: 0.0020 秒
-[4] 保存二进制文件耗时: 0.0014 秒
-交集大小: 5100 个编码
-总耗时: 0.0923 秒
+    轨迹1航点数: 10000, 轨迹2航点数: 10000
+
+[2] 球体扩展耗时: 2.3456 秒
+    轨迹1占用网格: 45231
+    轨迹2占用网格: 44892
+
+[3] PSI 冲突检测耗时: 1.2345 秒
+
+冲突网格数量: 12345
+轨迹1涉及冲突的坐标点: 8500
+轨迹2涉及冲突的坐标点: 8200
+
+轨迹1前 10 个冲突坐标:
+  (116.298432, 39.908765, 100.0m)
+  (116.298567, 39.908890, 100.0m)
+  ...
+
+============================================================
+冲突网格数: 12345
+总耗时: 3.6234 秒
+============================================================
 ```
+
+**配置参数**：
+
+在 `main()` 函数中可调整以下参数：
+
+```python
+SAFETY_DISTANCE = 50.0   # 安全距离（米）
+DEFAULT_HEIGHT = 100.0   # 默认高度（米）
+LEVEL = 21               # 网格层级
+PSI_PORT = 12140         # PSI 通信端口
+```
+
+**技术细节**：
+
+- **球体扩展**：使用 `gc.sphere3d()` 函数，该函数计算以 (lat, lng, height) 为球心、radius 为半径的包围盒内所有 3D 网格编码（96 位）
+- **PSI 协议**：调用 `psi/frontend.exe` 执行两方隐私集合交集，仅 Receiver 获得交集结果
+- **坐标关联**：通过 `code_to_points` 字典记录每个网格编码对应的原始轨迹坐标，便于追溯冲突来源
 
 ### 10.3 PSI（隐私集合交集）计算
 
