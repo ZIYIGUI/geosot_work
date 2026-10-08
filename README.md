@@ -23,6 +23,8 @@ HTTP 层使用 FastAPI，测试既覆盖与 iwhere 黄金响应的逐字段比�
 - [十二、空域可用性计算（城市低空监管）](#十二空域可用性计算城市低空监管)
 - [十三、CPSI 交集基数计算](#十三cpsi-交集基数计算)
 - [十四、无人机起降场选址算法（基于网格）](#十四无人机起降场选址算法基于网格)
+- [十五、iWhere 功能复现与代码补齐](#十五iwhere-功能复现与代码补齐)
+- [十六、基于 FHE 与 PSI 的无人机起降场自适应选址](#十六基于-fhe-与-psi-的无人机起降场自适应选址2026-10-08-更新)
 
 ---
 
@@ -1302,3 +1304,125 @@ python -m unittest discover -s tests -v
 - 测试日志：`fix/附件A03_iWhere复现代码与验证证据/verification/`
 
 > **注意**：本次更新基于 2026-09-24 的核验结果。114 个测试全部通过，包括原 82 项、数据契约 12 项、缺陷/partial profile/localhost HTTP 回归 20 项。
+
+---
+
+## 十六、基于 FHE 与 PSI 的无人机起降场自适应选址（2026-10-08 更新）
+
+### 16.1 概述
+
+本模块实现了 基于全同态加密与隐私集合求交的无人机起降场自适应选址方法  的完整流程，使用 `psi/frontend.exe` 执行两两 PSI 级联求交。
+
+**步骤 S0-S7 完整对应**：
+- **S0**: 多方原始数据预处理
+- **S1**: GB/T 40087 混合粒度四维时空网格构建
+- **S2**: 各方本地生成约束集合 + 准备 FHE 输入
+- **S3**: FHE 密态加权求和（明文替代，见 `fhe_plaintext.py`）
+- **S4**: 四方 PSI 隐私集合求交（两两级联，`frontend.exe`）
+- **S5**: 规划方本地空间聚类 + 风险加权质心
+- **S6**: 时空滑窗可用性验证
+- **S7**: 候选场址筛选与结果输出
+
+### 16.2 四方参与模型
+
+| 参与方 | 持有数据 | 输出集合 |
+|--------|----------|----------|
+| 地理信息方 | 障碍物、实体承载面、软约束风险因子 | S_land |
+| 空域管理方 | 禁飞区、临时空管等空域约束 | S_air(tj) |
+| 气象服务方 | 恶劣气象等气象约束 | S_met(tj) |
+| 规划方 | 场景权重、mapTable、私钥 | S_risk(tj) |
+
+### 16.3 两两级联 PSI
+
+按照替代方案一，采用多轮两两 PSI 级联实现四方 PSI：
+
+```
+temp1 = PSI(S_land, S_air)
+temp2 = PSI(temp1, S_met)
+final = PSI(temp2, S_risk)
+```
+
+每轮 PSI 使用 `psi/frontend.exe` 执行两方协议：
+- Party A (sender, r=0): 发送方
+- Party B (receiver, r=1): 接收方，同时作为 server
+
+### 16.4 FHE 明文替代
+
+FHE 密态运算用 `tests/uav_siting/fhe_plaintext.py` 中的明文替代实现，所有 FHE 相关代码均用 `TODO[FHE]` 注释标注，以便未来替换为真实 FHE 库（如 SEAL/PySEAL, OpenFHE, TenSEAL 等）。
+
+**FHE 流程**：
+1. 规划方构建 mapTable（本地）
+2. 地理信息方加密风险因子并发送（明文替代）
+3. 规划方加密权重并发送（明文替代）
+4. FHE 服务器密态计算加权求和（明文替代）
+5. 规划方解密并关联网格 ID（明文替代）
+
+### 16.5 测试文件
+
+位于 `tests/uav_siting/` 目录：
+
+| 文件 | 说明 |
+|------|------|
+| `__init__.py` | 测试包初始化 |
+| `psi_helpers.py` | PSI 辅助工具：输入输出、进程编排、级联求交 |
+| `fhe_plaintext.py` | FHE 明文替代模块（含 TODO[FHE] 标注） |
+| `test_fhe_psi_siting.py` | 完整测试套件（20 个测试） |
+
+### 16.6 测试覆盖
+
+| 测试类 | 测试数 | 覆盖内容 |
+|--------|--------|----------|
+| TestPSIHelpers | 3 | PSI 辅助工具（hex 转换、明文求交） |
+| TestPSIExecution | 5 | frontend.exe PSI 执行（基本、空集、全重叠、级联、一致性） |
+| TestFHEPlaintext | 2 | FHE 明文替代（风险评分、mapTable） |
+| TestFHERiskScoring | 1 | FHE 端到端风险评分流程 |
+| TestPartySetGeneration | 4 | 四方本地约束集合生成 |
+| TestFourPartyPSI | 2 | 四方 PSI 求交（t=0、全时间步） |
+| TestFullPipelineFHEPSI | 2 | 完整 S0-S7 流程、与明文流程一致性 |
+| TestTimeWindowAvailability | 1 | 基于 PSI 交集的时间窗口可用性 |
+
+**运行测试**：
+```bash
+cd D:/code/geosot_work
+python -m unittest tests.uav_siting.test_fhe_psi_siting -v
+```
+
+**测试结果**（2026-10-08）：
+```
+Ran 20 tests in ~70s (含完整区域 PSI 求交)
+OK
+```
+
+**选址结果**（德清县全域，与 test_uav_siting.py 完全一致）：
+```
+总时空网格: 149,340
+硬约束幸存: 113,005
+PSI 交集网格 (t=0): 11,455
+聚类数: 2
+最终候选起降场: 2
+  [1] 经度=120.051282, 纬度=30.566794, 高度=245.3m, 可用性=1.00
+  [2] 经度=120.052020, 纬度=30.566995, 高度=735.8m, 可用性=1.00
+```
+
+### 16.7 与现有测试的一致性
+
+本测试使用与 `tests/test_uav_siting.py` 相同的测试数据和参数，确保 FHE+PSI 流程的输出与明文流程完全一致。`test_consistency_with_plain_pipeline` 测试验证了这一点。
+
+### 16.8 性能优化
+
+- **PSI_TIME_END = 3**: PSI 测试使用较少时间步（每步需 3 次 pairwise PSI 调用），完整测试使用 10 步
+- **SMALL_LOWER/SMALL_UPPER**: 使用小区域（~500m×500m）进行聚类和 PSI 测试，避免内存问题
+- **索引优化**: 使用 dict 索引加速网格查找，避免 O(n²) 遍历
+
+### 16.9 依赖项
+
+- **psi/frontend.exe**: PSI 协议实现（已包含在项目中）
+- **numpy**: 数值计算
+- **sklearn**: DBSCAN 聚类（可选，有备选实现）
+
+### 16.10 未来工作
+
+1. **FHE 真实实现**: 替换 `fhe_plaintext.py` 中的明文替代为真实 FHE 库
+2. **多方 PSI 优化**: 探索单轮四方 PSI 协议（如基于门限 PSI）
+3. **性能基准**: 大规模区域的 PSI 性能测试
+4. **安全性验证**: 验证 FHE+PSI 流程的安全性（零知识、数据不出域）
