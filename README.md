@@ -25,6 +25,7 @@ HTTP 层使用 FastAPI，测试既覆盖与 iwhere 黄金响应的逐字段比�
 - [十四、无人机起降场选址算法（基于网格）](#十四无人机起降场选址算法基于网格)
 - [十五、iWhere 功能复现与代码补齐](#十五iwhere-功能复现与代码补齐)
 - [十六、基于 FHE 与 PSI 的无人机起降场自适应选址](#十六基于-fhe-与-psi-的无人机起降场自适应选址2026-10-08-更新)
+- [十七、低空导航规划器](#十七低空导航规划器2026-10-08-更新)
 
 ---
 
@@ -1506,3 +1507,236 @@ PSI 交集网格 (t=0): 11,455
 2. **多方 PSI 优化**: 探索单轮四方 PSI 协议（如基于门限 PSI）
 3. **性能基准**: 大规模区域的 PSI 性能测试
 4. **安全性验证**: 验证 FHE+PSI 流程的安全性（零知识、数据不出域）
+
+---
+
+## 十七、低空导航规划器（2026-10-08 更新）
+
+### 17.1 功能概述
+
+`src/low_altitude_planner.py` 整合起降场选址、空域容量、轨迹冲突检测三大能力，形成完整的低空导航规划闭环。
+
+**核心思想**：
+- **选址**回答"在哪飞"
+- **容量**回答"能飞多少"
+- **冲突检测**回答"怎么飞不打架"
+
+三者通过 GeoSOT 网格编码统一空间语言，通过 PSI 实现多方隐私协作，通过时间窗机制实现动态调度。
+
+### 17.2 架构设计
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Phase 1: 基础设施规划                      │
+│                                                             │
+│  起降场选址 (uav_siting)                                      │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │ 四方 PSI 求交 → 硬约束过滤 → FHE 风险评分         │       │
+│  │ → DBSCAN 聚类 → 时空滑窗验证                      │       │
+│  │                                                   │       │
+│  │ 输出: 候选起降场坐标 + 可用时间窗                   │       │
+│  └──────────────────────────────────────────────────┘       │
+│           ↓ 确定起降场位置                                    │
+├─────────────────────────────────────────────────────────────┤
+│                    Phase 2: 空域规划                          │
+│                                                             │
+│  空域容量 (airspace_capacity)                                 │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │ 起降场周边空域 → airspace_grids() 3D 填充          │       │
+│  │ → 扣除禁飞区/障碍物 → 计算可用容量                  │       │
+│  │                                                   │       │
+│  │ 输出: 空域容量上限 + 各时间片的可用网格数             │       │
+│  └──────────────────────────────────────────────────┘       │
+│           ↓ 确定"能飞多少架"                                  │
+├─────────────────────────────────────────────────────────────┤
+│                    Phase 3: 航线规划与冲突检测                  │
+│                                                             │
+│  轨迹冲突检测 (trajectory_conflict)                            │
+│  ┌──────────────────────────────────────────────────┐       │
+│  │ 起降场 A → 起降场 B 的航线                         │       │
+│  │ → 每个航点 sphere3d() 安全距离扩展                  │       │
+│  │ → PSI 与已有航线求交                                │       │
+│  │ → 冲突网格 → 最近轨迹坐标                           │       │
+│  │                                                   │       │
+│  │ 输出: 无冲突航线 or 冲突位置 + 改航建议               │       │
+│  └──────────────────────────────────────────────────┘       │
+│           ↓ 确认"这条航线能飞"                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 17.3 核心 API
+
+#### 17.3.1 空域容量计算
+
+```python
+def airspace_capacity(
+    lower_polygon, upper_polygon, h_min, h_max, level,
+    no_fly_zones=None, obstacles=None
+) -> Dict:
+    """计算空域容量：该空域最多能容纳多少架无人机。
+    
+    返回:
+        {
+            'total_grids': int,           # 空域总网格数
+            'available_grids': int,       # 可用网格数
+            'single_uav_grids': int,      # 单架无人机占用网格数
+            'capacity': int,              # 最大容纳无人机数量
+            'volume_km3': float,          # 空域总体积
+            'available_volume_km3': float # 可用体积
+        }
+    """
+```
+
+#### 17.3.2 轨迹冲突检测
+
+```python
+def expand_trajectory_to_spheres(csv_path, radius_m, height=0, level=21) -> Dict:
+    """将整条轨迹的所有点扩展为球体，返回去重后的占用网格集合。"""
+
+def detect_trajectory_conflicts(
+    traj1_data, traj2_data, use_psi=True, psi_port=12150, timeout=60
+) -> Dict:
+    """检测两条轨迹的冲突网格。支持 PSI 和明文两种模式。"""
+```
+
+#### 17.3.3 低空导航规划器
+
+```python
+class LowAltitudePlanner:
+    """低空导航规划器：整合选址、容量、冲突检测三大能力。"""
+    
+    def register_site(self, name, lower_polygon, upper_polygon, h_min, h_max, ...):
+        """注册起降场：执行选址算法确定候选位置。"""
+    
+    def check_capacity(self, site_name, no_fly_zones=None, obstacles=None):
+        """检查起降场周边空域的容量。"""
+    
+    def validate_route(self, route_csv, use_psi=True, psi_port=12160):
+        """验证新航线是否与已有航线冲突。"""
+    
+    def approve_route(self, route_csv, route_name=None):
+        """批准并注册新航线。"""
+    
+    def plan_flight(self, origin_site, dest_site, route_csv, ...):
+        """端到端飞行规划：选址 → 容量 → 冲突检测。"""
+```
+
+### 17.4 使用示例
+
+#### 17.4.1 空域容量计算
+
+```python
+from low_altitude_planner import airspace_capacity
+
+# 定义空域边界
+lower_polygon = [(116.28, 39.89), (116.32, 39.89), (116.32, 39.93), (116.28, 39.93)]
+upper_polygon = [(116.285, 39.895), (116.315, 39.895), (116.315, 39.925), (116.285, 39.925)]
+
+# 计算容量
+result = airspace_capacity(
+    lower_polygon, upper_polygon,
+    h_min=100, h_max=500,
+    level=21
+)
+
+print(f"空域容量: {result['capacity']} 架无人机")
+print(f"可用网格: {result['available_grids']:,}")
+print(f"空域体积: {result['volume_km3']:.4f} km³")
+```
+
+#### 17.4.2 端到端飞行规划
+
+```python
+from low_altitude_planner import LowAltitudePlanner
+
+# 创建规划器
+planner = LowAltitudePlanner(level=21, safety_distance=50.0)
+
+# 注册起降场
+planner.register_site(
+    name="Origin",
+    lower_polygon=lower_polygon,
+    upper_polygon=upper_polygon,
+    h_min=100, h_max=500,
+    time_window=(0, 10)
+)
+
+planner.register_site(
+    name="Dest",
+    lower_polygon=lower_polygon,
+    upper_polygon=upper_polygon,
+    h_min=100, h_max=500,
+    time_window=(0, 10)
+)
+
+# 批准已有航线
+planner.approve_route("data/existing_route.csv", "Route-1")
+
+# 规划新飞行
+result = planner.plan_flight(
+    origin_site="Origin",
+    dest_site="Dest",
+    route_csv="data/new_route.csv",
+    time_window=(0, 10),
+    use_psi=True
+)
+
+print(f"批准: {result['approved']}")
+print(f"摘要: {result['summary']}")
+```
+
+### 17.5 测试覆盖
+
+`tests/low_altitude_planner/test_planner.py` 提供完整的集成测试：
+
+| 测试类 | 测试数 | 覆盖内容 |
+|--------|--------|----------|
+| TestAirspaceCapacity | 3 | 基本容量、禁飞区、障碍物 |
+| TestTrajectoryConflictDetection | 3 | 轨迹扩展、明文冲突、PSI 冲突 |
+| TestLowAltitudePlanner | 6 | 注册起降场、检查容量、验证航线、批准航线、端到端规划（批准/拒绝） |
+
+**运行测试**：
+```bash
+cd D:/code/geosot_work
+python -m unittest tests.low_altitude_planner.test_planner -v
+```
+
+### 17.6 技术要点
+
+1. **统一空间语言**：所有计算基于 GeoSOT 3D 网格编码（96 位），确保选址、容量、冲突检测使用相同的空间参考系
+
+2. **安全距离球体扩展**：每个轨迹点不仅占用其所在网格，而是以该点为球心、安全距离为半径的球体内所有网格（`gc.sphere3d()`）
+
+3. **PSI 隐私保护**：航线冲突检测支持 PSI 模式，两条航线的所有者无需暴露完整轨迹即可检测冲突
+
+4. **容量动态计算**：
+   - 容量 = 可用网格数 / 单架无人机占用网格数
+   - 可用网格 = 总网格 - 禁飞区 - 障碍物
+   - 单架占用 = 安全距离球体扩展后的网格数
+
+5. **时间窗调度**：起降场选址的时空滑窗机制 `A(c_k, W)` 可自然扩展到容量和冲突检测的时间维度
+
+### 17.7 依赖关系
+
+```
+low_altitude_planner.py
+├── geosot_core.py
+│   ├── airspace_grids()          # 空域网格填充
+│   ├── sphere3d()                # 球体扩展
+│   ├── center_point3d()          # 网格中心点
+│   └── airspace_available_volume()  # 体积计算
+├── uav_siting.py
+│   └── uav_siting()              # 选址算法
+├── geofile.py
+│   └── read_csv()                # 轨迹文件读取
+└── tests/uav_siting/psi_helpers.py
+    └── run_pairwise_psi()        # PSI 求交
+```
+
+### 17.8 未来工作
+
+1. **实时调度**：基于时间窗的动态航线调度，支持多架无人机同时飞行
+2. **改航算法**：检测到冲突后自动生成无冲突的替代航线
+3. **气象集成**：将气象数据接入容量计算，动态调整可用空域
+4. **多起降场协同**：支持多个起降场之间的航线协调和优化
+5. **性能优化**：大规模航线集合的冲突检测优化（空间索引、增量更新）
